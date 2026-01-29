@@ -31,7 +31,7 @@ Need to show a client your work?
 
 ### 4. Zero-Config & Production Ready
 *   **Pre-installed Tools**: `gh` (GitHub), `vercel`, `bun`, `python`, `ripgrep`.
-*   **Office Suite**: `pandoc` (Docs), `marp` (Slides), `csvkit` (Excel/Data), `ffmpeg` (Media).
+*   **Office Suite**: `pandoc` (Docs), `marp` (Slides), `csvkit` (Excel), `qmd` (Local AI Search).
 *   **Secure**: All sub-agents are firewalled.
 *   **Self-Healing**: Docker volumes ensure `moltbot-config` and `moltbot-workspace` persist forever.
 

@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     imagemagick \
     graphviz \
+    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Cloudflare Tunnel (cloudflared)
@@ -54,10 +55,15 @@ RUN apt-get update && apt-get install -y unzip && rm -rf /var/lib/apt/lists/* &&
     curl -fsSL https://bun.sh/install | bash
 ENV PATH="/root/.bun/bin:${PATH}"
 
-# Install Vercel & Marp (Slides)
+# Install Vercel & Marp (Slides) & QMD (Search)
 # Node & NPM are already provided by base image
+# QMD requires bun and global install
 RUN npm install -g yarn vercel @marp-team/marp-cli && \
+    bun install -g https://github.com/tobi/qmd && \
     hash -r
+
+# Configure QMD Persistence
+ENV XDG_CACHE_HOME="/home/node/.moltbot/cache"
 
 # Install Python Tools (IPython, Office Libs)
 # Use --break-system-packages because we are in a container/appliance
