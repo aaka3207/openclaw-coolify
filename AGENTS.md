@@ -364,7 +364,7 @@ Uses `tecnativa/docker-socket-proxy` to expose only required Docker APIs:
 
 **Credentials:**
 - **Username:** `admin`
-- **Password:** `OpenClaw2026!Secure`
+- **Password:** `OpenClaw2026Secure`
 
 **Why this was needed:**
 - OpenClaw's `gateway.bind="lan"` treats all LAN connections as trusted
@@ -549,7 +549,7 @@ git push origin main
 
 1. **HTTP Basic Auth (Traefik layer):**
    - Username: `admin`
-   - Password: `OpenClaw2026!Secure`
+   - Password: `OpenClaw2026Secure`
 
 2. **OpenClaw Token:**
    - Token: `5e9721970ba74e2c9ca3d854bee715b1b923c51dfb6a8942`
@@ -562,7 +562,7 @@ https://bot.appautomation.cloud?token=5e9721970ba74e2c9ca3d854bee715b1b923c51dfb
 
 **Access flow:**
 1. Open the URL in your browser
-2. Browser prompts for HTTP Basic Auth credentials (enter admin/OpenClaw2026!Secure)
+2. Browser prompts for HTTP Basic Auth credentials (enter admin/OpenClaw2026Secure)
 3. After Basic Auth succeeds, dashboard loads
 4. Dashboard connects to WebSocket using the token from URL parameter
 
