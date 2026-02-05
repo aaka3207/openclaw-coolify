@@ -11,7 +11,7 @@ This file contains environment-specific details for your VPS deployment.
 - **Host:** netcup VPS
 - **SSH Command:** `ssh netcup` (with sudo access)
 - **Dashboard:** https://bot.appautomation.cloud
-- **Token:** xK7mR9pL2nQ4wF6jH8vB3cT5yG1dN0sA
+- **Token:** (stored securely in container - use `openclaw config get gateway.auth.token` to retrieve)
 
 ### Container Information
 - **Naming Pattern:** `openclaw-qsw0sgwcog4wg88g448sgs-<timestamp>`
