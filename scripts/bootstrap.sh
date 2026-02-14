@@ -20,14 +20,14 @@ chmod 700 "$OPENCLAW_STATE/credentials"
 CRED_DIR="$OPENCLAW_STATE/credentials"
 mkdir -p "$CRED_DIR"
 chmod 700 "$CRED_DIR"
-for var in GITHUB_TOKEN VERCEL_TOKEN CF_TUNNEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+for var in GITHUB_TOKEN; do
     if [ -n "${!var}" ]; then
         printf '%s' "${!var}" > "$CRED_DIR/$var"
         chmod 600 "$CRED_DIR/$var"
     fi
 done
 # Unset deployment tokens from environment (AI agent doesn't need them directly)
-unset VERCEL_TOKEN CF_TUNNEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID
+unset GITHUB_TOKEN
 
 # Ensure data subdirectories exist (HOME=/data, no /root/ symlinks needed)
 for dir in .agents .ssh .config .local .cache .npm .bun .claude .kimi; do
