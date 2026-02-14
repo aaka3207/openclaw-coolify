@@ -127,9 +127,7 @@ RUN --mount=type=cache,target=/data/.npm \
 
 # AI Tool Suite & ClawHub (download then execute for auditability)
 RUN curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh && \
-    bash /tmp/claude-install.sh && rm /tmp/claude-install.sh && \
-    curl -L https://code.kimi.com/install.sh -o /tmp/kimi-install.sh && \
-    bash /tmp/kimi-install.sh && rm /tmp/kimi-install.sh
+    bash /tmp/claude-install.sh && rm /tmp/claude-install.sh
 
 # Stage 5: Final application stage (changes frequently)
 FROM dependencies AS final
@@ -142,7 +140,6 @@ COPY . .
 
 # Specialized symlinks and permissions
 RUN ln -sf /data/.claude/bin/claude /usr/local/bin/claude 2>/dev/null || true && \
-    ln -sf /data/.kimi/bin/kimi /usr/local/bin/kimi 2>/dev/null || true && \
     ln -sf /app/scripts/openclaw-approve.sh /usr/local/bin/openclaw-approve && \
     chmod +x /app/scripts/*.sh /usr/local/bin/openclaw-approve
 
@@ -153,7 +150,7 @@ RUN groupadd -r openclaw && useradd -r -g openclaw -d /data -s /bin/bash opencla
     chown -R root:root /app/scripts/ && chmod -R 755 /app/scripts/
 
 # FINAL PATH
-ENV PATH="/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin:/data/.kimi/bin"
+ENV PATH="/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin"
 
 USER openclaw
 EXPOSE 18789
