@@ -29,10 +29,9 @@ done
 # Unset deployment tokens from environment (AI agent doesn't need them directly)
 unset VERCEL_TOKEN CF_TUNNEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID
 
+# Ensure data subdirectories exist (HOME=/data, no /root/ symlinks needed)
 for dir in .agents .ssh .config .local .cache .npm .bun .claude .kimi; do
-    if [ ! -L "/root/$dir" ] && [ ! -e "/root/$dir" ]; then
-        ln -sf "/data/$dir" "/root/$dir"
-    fi
+    mkdir -p "/data/$dir"
 done
 
 # ----------------------------

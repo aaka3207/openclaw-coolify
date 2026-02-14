@@ -54,7 +54,7 @@ RUN install -m 0755 -d /etc/apt/keyrings && \
 
 # Install Go (pinned with checksum verification)
 ARG GO_VERSION=1.23.4
-ARG GO_SHA256=6924efde5de86fe277676e929dc9917d466571f1f3276a1a6c41d631583fc258
+ARG GO_SHA256=6924efde5de86fe277676e929dc9917d466efa02fb934197bc2eba35d5680971
 RUN curl -L "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o go.tar.gz && \
     echo "${GO_SHA256}  go.tar.gz" | sha256sum -c - && \
     tar -C /usr/local -xzf go.tar.gz && \

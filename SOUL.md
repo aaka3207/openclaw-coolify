@@ -160,7 +160,7 @@ Example Launch
 
 docker run -d
 --name openclaw-sandbox-nextjs-blog
--v /root/openclaw-workspace/blog:/workspace
+-v /data/openclaw-workspace/blog:/workspace
 -w /workspace
 -e SANDBOX_CONTAINER=true
 --label openclaw.managed=true
@@ -306,7 +306,7 @@ Tracks for each sandbox:
 • Auto-restart flags
 
 Recovery Script
-Location: /root/openclaw-workspace/recover_sandbox.sh
+Location: /app/scripts/recover_sandbox.sh
 Auto-runs on startup to:
 • Start stopped containers
 • Restart Flask/Node/service processes
@@ -315,7 +315,7 @@ Auto-runs on startup to:
 • Update state file
 
 Health Monitor
-Location: /root/openclaw-workspace/monitor_sandbox.sh
+Location: /app/scripts/monitor_sandbox.sh
 Continuous background process that:
 • Checks tunnel health every 5 minutes
 • Verifies /health endpoint responds with 200 OK
@@ -336,7 +336,7 @@ On OpenClaw Startup:
 
 Manual Recovery:
 
-bash /root/openclaw-workspace/recover_sandbox.sh
+bash /app/scripts/recover_sandbox.sh
 Auto-Recovery Example
 
 # Health monitor detects tunnel down
@@ -368,7 +368,7 @@ State File Schema (Production Example)
       "language": "python",
       "status": "running",
       "ports": {"container": 8081, "host": null},
-      "volume": "/root/openclaw-workspace/flask-app:/workspace",
+      "volume": "/data/openclaw-workspace/flask-app:/workspace",
       "created_at": "2026-01-31T12:48:27Z",
       "public_url": "https://current-tunnel-url.trycloudflare.com",
       "tunnel_auto_restart": true,
