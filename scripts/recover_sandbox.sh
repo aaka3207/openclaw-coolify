@@ -9,52 +9,83 @@ log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
+# Validate container ID format (Docker hash or openclaw-prefixed name)
+validate_container_id() {
+    local id="$1"
+    if [[ "$id" =~ ^[a-f0-9]{12,64}$ ]]; then
+        return 0  # Docker short/long hash
+    elif [[ "$id" =~ ^(openclaw-sandbox-|moltbot-essa-)[a-zA-Z0-9._-]+$ ]]; then
+        return 0  # Named container with expected prefix
+    else
+        return 1
+    fi
+}
+
+# Verify container belongs to openclaw (has managed label)
+verify_managed_container() {
+    local id="$1"
+    local label
+    label=$(docker inspect -f '{{index .Config.Labels "openclaw.managed"}}' "$id" 2>/dev/null)
+    if [ "$label" = "true" ]; then
+        return 0
+    fi
+    # Also check SANDBOX_CONTAINER label
+    label=$(docker inspect -f '{{index .Config.Labels "SANDBOX_CONTAINER"}}' "$id" 2>/dev/null)
+    if [ "$label" = "true" ]; then
+        return 0
+    fi
+    return 1
+}
+
 if [ ! -f "$STATE_FILE" ]; then
-  log "ℹ️  No state file found at $STATE_FILE. Nothing to recover."
+  log "No state file found at $STATE_FILE. Nothing to recover."
   exit 0
 fi
 
-log "🔄 Starting Sandbox Recovery..."
+log "Starting Sandbox Recovery..."
 
 # Iterate through sandboxes in state using jq
-# Note: This requires jq to be installed (which it is in the Dockerfile)
-SANDBOX_IDS=$(jq -r '.sandboxes | keys[]' "$STATE_FILE")
+SANDBOX_IDS=$(jq -r '.sandboxes | keys[]' "$STATE_FILE" 2>/dev/null)
 
 for id in $SANDBOX_IDS; do
-  log "🔍 Checking sandbox: $id"
-  
+  log "Checking sandbox: $id"
+
+  # SECURITY: Validate container ID format
+  if ! validate_container_id "$id"; then
+    log "REJECTED: Invalid container ID format: $id"
+    continue
+  fi
+
   # Extract details
   PROJECT=$(jq -r ".sandboxes[\"$id\"].project" "$STATE_FILE")
   STATUS=$(jq -r ".sandboxes[\"$id\"].status" "$STATE_FILE")
-  
+
   # Check if docker container exists
-  if ! docker ps -a --format '{{.Names}}' | grep -q "^$id$"; then
-    log "⚠️  Container $id not found in Docker. Marking as lost/stopped in state."
-    # Update state to valid 'stopped' if it was 'running'
-    # Implementation detail: would need a tool to update json file in place (e.g. temporary file)
+  if ! docker ps -a --format '{{.Names}}' | grep -q "^${id}$"; then
+    log "Container $id not found in Docker. Marking as lost/stopped in state."
+    continue
+  fi
+
+  # SECURITY: Verify container has openclaw-managed label
+  if ! verify_managed_container "$id"; then
+    log "REJECTED: Container $id is not openclaw-managed (missing label). Skipping."
     continue
   fi
 
   # Check if running
   IS_RUNNING=$(docker inspect -f '{{.State.Running}}' "$id" 2>/dev/null)
-  
+
   if [ "$IS_RUNNING" != "true" ]; then
-    log "⚠️  Container $id is stopped. Attempting restart..."
-    docker start "$id"
-    if [ $? -eq 0 ]; then
-      log "✅ Restarted container $id"
+    log "Container $id is stopped. Attempting restart..."
+    if docker start "$id"; then
+      log "Restarted container $id"
     else
-      log "❌ Failed to restart $id"
+      log "Failed to restart $id"
       continue
     fi
   else
-    log "✅ Container $id is running."
+    log "Container $id is running."
   fi
-
-  # Recovery for Cloudflare Tunnels (if they were enabled)
-  # This relies on the convention that tunnels are started inside the container
-  # We might need to re-trigger the tunnel startup command if the container restarted
-  # For now, we just verify connectivity in the monitor script.
 done
 
-log "🏁 Recovery scan complete."
+log "Recovery scan complete."

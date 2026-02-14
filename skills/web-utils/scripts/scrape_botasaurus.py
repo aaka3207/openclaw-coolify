@@ -2,9 +2,6 @@ from botasaurus.browser import browser, Driver
 import sys
 import json
 
-# Botasaurus Cloudflare Bypass Scraper
-# This script is specifically for bypassing Cloudflare protection (e.g. UCars)
-
 
 @browser(
     headless=False,
@@ -15,24 +12,18 @@ import json
 )
 def scrape(driver: Driver, url):
     """
-    Scrapes the target URL using Google Referrer and Cloudflare Bypass.
+    Scrapes the target URL using standard browser navigation.
+    Note: Cloudflare bypass intentionally removed for legal/ethical compliance.
     """
     try:
-        # Visit using Google Referrer and Cloudflare Bypass
-        driver.google_get(url, bypass_cloudflare=True)
-
-        # Wait for potential Cloudflare challenge or page load
+        driver.get(url)
         driver.long_random_sleep()
 
-        # Check if still blocked
         page_html = driver.page_html
-        if "Just a moment" in page_html or "cf-" in page_html.lower():
-            driver.sleep(10)
-            page_html = driver.page_html
 
         return {
             "url": url,
-            "status": 200,  # If we got here, we assume success
+            "status": 200,
             "title": driver.title,
             "html": page_html,
         }
@@ -48,7 +39,6 @@ if __name__ == "__main__":
     url = sys.argv[1]
 
     try:
-        # Run the scraper
         result = scrape(url)
         print(json.dumps(result, default=str))
     except Exception as e:

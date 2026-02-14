@@ -10,22 +10,31 @@ if [[ -z "$NAME" ]]; then
     exit 1
 fi
 
+# Validate input
+validate_identifier "$NAME" "sandbox name" || exit 1
+
+# Sanitize for SQL
+SAFE_NAME=$(sanitize_sql "$NAME") || exit 1
+
 # Get info
-ID=$(query_db "SELECT id FROM sandboxes WHERE name='$NAME';")
+ID=$(query_db "SELECT id FROM sandboxes WHERE name='$SAFE_NAME';")
 
 if [[ -z "$ID" ]]; then
-    echo "❌ Sandbox '$NAME' not found in registry."
+    echo "Sandbox '$NAME' not found in registry."
     exit 1
 fi
 
-echo "🗑️ Deleting Sandbox: $NAME ($ID)"
+echo "Deleting Sandbox: $NAME ($ID)"
 
 # Stop/Remove Container
 docker rm -f "$ID" || echo "Warning: Container might already be gone."
 
-# Remove from DB
-query_db "DELETE FROM sandboxes WHERE id='$ID';"
+# Sanitize the ID retrieved from DB before using in delete query
+SAFE_ID=$(sanitize_sql "$ID") || exit 1
 
-echo "✅ Sandbox deleted."
-# Note: We purposely do NOT delete the volume by default to preserve data safety 
-# unless explicitly requested (feature for later).
+# Remove from DB
+query_db "DELETE FROM sandboxes WHERE id='$SAFE_ID';"
+
+echo "Sandbox deleted."
+# Note: We purposely do NOT delete the volume by default to preserve data safety
+# unless explicitly requested.

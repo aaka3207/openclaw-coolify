@@ -16,6 +16,19 @@ mkdir -p "$OPENCLAW_STATE/credentials"
 mkdir -p "$OPENCLAW_STATE/agents/main/sessions"
 chmod 700 "$OPENCLAW_STATE/credentials"
 
+# SECURITY: Isolate deployment credentials into files, remove from environment
+CRED_DIR="$OPENCLAW_STATE/credentials"
+mkdir -p "$CRED_DIR"
+chmod 700 "$CRED_DIR"
+for var in GITHUB_TOKEN VERCEL_TOKEN CF_TUNNEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+    if [ -n "${!var}" ]; then
+        printf '%s' "${!var}" > "$CRED_DIR/$var"
+        chmod 600 "$CRED_DIR/$var"
+    fi
+done
+# Unset deployment tokens from environment (AI agent doesn't need them directly)
+unset VERCEL_TOKEN CF_TUNNEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID
+
 for dir in .agents .ssh .config .local .cache .npm .bun .claude .kimi; do
     if [ ! -L "/root/$dir" ] && [ ! -e "/root/$dir" ]; then
         ln -sf "/data/$dir" "/root/$dir"
@@ -113,7 +126,8 @@ if [ ! -f "$CONFIG_FILE" ]; then
       "allowInsecureAuth": false
     },
     "trustedProxies": [
-      "*"
+      "172.16.0.0/12",
+      "192.168.100.0/24"
     ],
     "tailscale": {
       "mode": "off",
@@ -161,17 +175,17 @@ export OPENCLAW_STATE_DIR="$OPENCLAW_STATE"
 # ----------------------------
 # Recovery & Monitoring
 # ----------------------------
-if [ -f scripts/recover_sandbox.sh ]; then
-  echo "🛡️  Deploying Recovery Protocols..."
-  cp scripts/recover_sandbox.sh "$WORKSPACE_DIR/"
-  cp scripts/monitor_sandbox.sh "$WORKSPACE_DIR/"
-  chmod +x "$WORKSPACE_DIR/recover_sandbox.sh" "$WORKSPACE_DIR/monitor_sandbox.sh"
-  
-  # Run initial recovery
-  bash "$WORKSPACE_DIR/recover_sandbox.sh"
-  
-  # Start background monitor
-  nohup bash "$WORKSPACE_DIR/monitor_sandbox.sh" >/dev/null 2>&1 &
+# SECURITY: Run scripts from /app/scripts/ (read-only image path), NOT workspace
+if [ -f /app/scripts/recover_sandbox.sh ]; then
+  echo "Running Recovery Protocols..."
+  # Remove any old copies from workspace (cleanup from previous versions)
+  rm -f "$WORKSPACE_DIR/recover_sandbox.sh" "$WORKSPACE_DIR/monitor_sandbox.sh"
+
+  # Run from immutable image path
+  bash /app/scripts/recover_sandbox.sh
+
+  # Start background monitor from image path
+  nohup bash /app/scripts/monitor_sandbox.sh >/dev/null 2>&1 &
 fi
 
 # ----------------------------
@@ -189,26 +203,29 @@ if [ -f "$CONFIG_FILE" ]; then
     fi
 fi
 
-echo ""
-echo "=================================================================="
-echo "🦞 OpenClaw is ready!"
-echo "=================================================================="
-echo ""
-echo "🔑 Access Token: $TOKEN"
-echo ""
-echo "🌍 Service URL (Local): http://localhost:${OPENCLAW_GATEWAY_PORT:-18789}?token=$TOKEN"
+# SECURITY: Write access credentials to file instead of printing to stdout/logs
+ACCESS_FILE="$OPENCLAW_STATE/access.txt"
+cat > "$ACCESS_FILE" <<ACCESSEOF
+Access Token: $TOKEN
+Service URL (Local): http://localhost:${OPENCLAW_GATEWAY_PORT:-18789}?token=$TOKEN
+ACCESSEOF
 if [ -n "$SERVICE_FQDN_OPENCLAW" ]; then
-    echo "☁️  Service URL (Public): https://${SERVICE_FQDN_OPENCLAW}?token=$TOKEN"
-    echo "    (Wait for cloud tunnel to propagate if just started)"
+    echo "Service URL (Public): https://${SERVICE_FQDN_OPENCLAW}?token=$TOKEN" >> "$ACCESS_FILE"
 fi
-echo ""
-echo "👉 Onboarding:"
-echo "   1. Access the UI using the link above."
-echo "   2. To approve this machine, run inside the container:"
-echo "      openclaw-approve"
-echo "   3. To start the onboarding wizard:"
-echo "      openclaw onboard"
+chmod 600 "$ACCESS_FILE"
+
 echo ""
 echo "=================================================================="
-echo "🔧 Current ulimit is: $(ulimit -n)"
+echo "OpenClaw is ready!"
+echo "=================================================================="
+echo ""
+echo "Access credentials saved to: $ACCESS_FILE"
+echo "To view: cat $ACCESS_FILE"
+echo ""
+echo "Onboarding:"
+echo "  1. View credentials: cat $ACCESS_FILE"
+echo "  2. Approve this machine: openclaw-approve"
+echo "  3. Start onboarding: openclaw onboard"
+echo ""
+echo "=================================================================="
 exec openclaw gateway run

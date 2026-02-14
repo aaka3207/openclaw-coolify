@@ -18,7 +18,57 @@ if [ -z "$URL" ]; then
     exit 1
 fi
 
-echo "🕷️ Scraping Target: $URL (Mode: $MODE)" >&2
+# ----------------------------
+# SSRF Protection
+# ----------------------------
+validate_url() {
+    local url="$1"
+
+    # Must start with http:// or https://
+    if [[ ! "$url" =~ ^https?:// ]]; then
+        echo "ERROR: Only http:// and https:// URLs are allowed" >&2
+        return 1
+    fi
+
+    # Extract hostname
+    local host
+    host=$(echo "$url" | sed -E 's|https?://([^/:]+).*|\1|')
+
+    # Block internal Docker service names
+    local blocked_hosts="docker-proxy registry searxng localhost openclaw anycrawldocker"
+    for blocked in $blocked_hosts; do
+        if [ "$host" = "$blocked" ]; then
+            echo "ERROR: Access to internal service '$host' is blocked" >&2
+            return 1
+        fi
+    done
+
+    # Block loopback and metadata IPs directly in URL
+    if echo "$host" | grep -qE '^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|169\.254\.|0\.|localhost)'; then
+        echo "ERROR: Access to private/internal IP range is blocked" >&2
+        return 1
+    fi
+
+    # Resolve hostname and check for private IPs
+    local resolved_ip
+    resolved_ip=$(getent hosts "$host" 2>/dev/null | awk '{print $1}' | head -1)
+
+    if [ -n "$resolved_ip" ]; then
+        if echo "$resolved_ip" | grep -qE '^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|169\.254\.|0\.)'; then
+            echo "ERROR: URL resolves to private/internal IP ($resolved_ip)" >&2
+            return 1
+        fi
+    fi
+
+    return 0
+}
+
+# Validate before any scraping
+if ! validate_url "$URL"; then
+    exit 1
+fi
+
+echo "Scraping Target: $URL (Mode: $MODE)" >&2
 
 run_curl() {
     echo "Trying Curl..." >&2

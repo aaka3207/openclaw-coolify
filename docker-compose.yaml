@@ -6,6 +6,8 @@ services:
       - registry-data:/var/lib/registry
     environment:
       REGISTRY_HTTP_SECRET: ${SERVICE_BASE64_REGISTRY}
+    networks:
+      - internal
   openclaw:
     build:
       context: .
@@ -66,7 +68,7 @@ services:
       # Bootstrap controls
       OPENCLAW_AUTO_BOOTSTRAP: "1"
       OPENCLAW_PRINT_ACCESS: "1"
-      GATEWAY_TRUSTED_PROXIES: '*'
+      GATEWAY_TRUSTED_PROXIES: '172.16.0.0/12,192.168.100.0/24'
       # Fix for EMFILE/Inotify issues in Docker
       CHOKIDAR_USEPOLLING: "true"
       # Public URL Access
@@ -93,6 +95,9 @@ services:
     depends_on:
       - docker-proxy
 
+    networks:
+      - internal
+      - proxy
     command: ["bash", "/app/scripts/bootstrap.sh"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:18789/"]
@@ -102,20 +107,25 @@ services:
       start_period: 120s
 
   docker-proxy:
-    image: tecnativa/docker-socket-proxy:latest
+    image: tecnativa/docker-socket-proxy:0.2.0
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
-      # Security: Only enable necessary Docker APIs
-      POST: 1       # Create containers
-      CONTAINERS: 1 # List/manage containers
+      LOG_LEVEL: warning
+      # Security: Minimal Docker API access for sandbox management
+      CONTAINERS: 1 # List/inspect/create/start/stop containers
       IMAGES: 1     # Pull images
-      NETWORKS: 1   # Connect to networks
+      VOLUMES: 1    # Create volumes for sandboxes
       INFO: 1       # Version check
       VERSION: 1
-      EXEC: 1       # Run commands (exec)
-      EVENTS: 1     # Listen for events (if needed)
+      EVENTS: 1     # Listen for events
+      # SECURITY: The following are intentionally DISABLED (default 0)
+      # POST: 0     # No global POST override - granular perms above suffice
+      # EXEC: 0     # No exec into arbitrary containers
+      # NETWORKS: 0 # No network manipulation
+    networks:
+      - internal
 
   searxng:
     build:
@@ -133,6 +143,15 @@ services:
       - CHOWN
       - SETGID
       - SETUID
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+    internal: true  # No external access
+  proxy:
+    driver: bridge  # Outbound access for AI APIs
 
 volumes:
   openclaw-data:

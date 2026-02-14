@@ -52,8 +52,11 @@ RUN install -m 0755 -d /etc/apt/keyrings && \
     apt-get install -y docker-ce-cli && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Go (Latest)
-RUN curl -L "https://go.dev/dl/go1.23.4.linux-amd64.tar.gz" -o go.tar.gz && \
+# Install Go (pinned with checksum verification)
+ARG GO_VERSION=1.23.4
+ARG GO_SHA256=6924efde5de86fe277676e929dc9917d466571f1f3276a1a6c41d631583fc258
+RUN curl -L "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o go.tar.gz && \
+    echo "${GO_SHA256}  go.tar.gz" | sha256sum -c - && \
     tar -C /usr/local -xzf go.tar.gz && \
     rm go.tar.gz
 
@@ -72,9 +75,11 @@ RUN mkdir -p -m 755 /etc/apt/keyrings && \
     apt-get install -y gh && \
     rm -rf /var/lib/apt/lists/*
 
-# Install uv (Python tool manager)
+# Install uv (Python tool manager, pinned version)
 ENV UV_INSTALL_DIR="/usr/local/bin"
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ARG UV_VERSION=0.5.14
+RUN curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" -o /tmp/uv-install.sh && \
+    sh /tmp/uv-install.sh && rm /tmp/uv-install.sh
 
 # Stage 3: Language runtimes and package managers (change sometimes)
 FROM system-tools AS runtimes
@@ -83,8 +88,9 @@ ENV BUN_INSTALL_NODE=0 \
     BUN_INSTALL="/data/.bun" \
     PATH="/usr/local/go/bin:/data/.bun/bin:/data/.bun/install/global/bin:$PATH"
 
-# Install Bun
-RUN curl -fsSL https://bun.sh/install | bash
+# Install Bun (pinned version)
+ARG BUN_VERSION=1.1.42
+RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}"
 
 # Python tools
 RUN pip3 install ipython csvkit openpyxl python-docx pypdf botasaurus browser-use playwright --break-system-packages && \
@@ -103,8 +109,7 @@ FROM runtimes AS dependencies
 # OpenClaw install
 ARG OPENCLAW_BETA=false
 ENV OPENCLAW_BETA=${OPENCLAW_BETA} \
-    OPENCLAW_NO_ONBOARD=1 \
-    NPM_CONFIG_UNSAFE_PERM=true
+    OPENCLAW_NO_ONBOARD=1
 
 # Install Vercel, Marp, QMD with BuildKit cache mount for faster rebuilds
 RUN --mount=type=cache,target=/data/.bun/install/cache \
@@ -126,9 +131,11 @@ RUN --mount=type=cache,target=/data/.npm \
     exit 1; \
     fi
 
-# AI Tool Suite & ClawHub
-RUN curl -fsSL https://claude.ai/install.sh | bash && \
-    curl -L https://code.kimi.com/install.sh | bash
+# AI Tool Suite & ClawHub (download then execute for auditability)
+RUN curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh && \
+    bash /tmp/claude-install.sh && rm /tmp/claude-install.sh && \
+    curl -L https://code.kimi.com/install.sh -o /tmp/kimi-install.sh && \
+    bash /tmp/kimi-install.sh && rm /tmp/kimi-install.sh
 
 # Stage 5: Final application stage (changes frequently)
 FROM dependencies AS final
@@ -145,8 +152,15 @@ RUN ln -sf /data/.claude/bin/claude /usr/local/bin/claude 2>/dev/null || true &&
     ln -sf /app/scripts/openclaw-approve.sh /usr/local/bin/openclaw-approve && \
     chmod +x /app/scripts/*.sh /usr/local/bin/openclaw-approve
 
-# ✅ FINAL PATH (important)
+# SECURITY: Create non-root user for runtime
+RUN groupadd -r openclaw && useradd -r -g openclaw -d /data -s /bin/bash openclaw && \
+    mkdir -p /data && chown -R openclaw:openclaw /data && \
+    # Scripts must be readable but not writable by openclaw user
+    chown -R root:root /app/scripts/ && chmod -R 755 /app/scripts/
+
+# FINAL PATH
 ENV PATH="/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin:/data/.kimi/bin"
 
+USER openclaw
 EXPOSE 18789
 CMD ["bash", "/app/scripts/bootstrap.sh"]
