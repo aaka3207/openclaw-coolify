@@ -60,12 +60,6 @@ RUN curl -L "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o go.tar.gz 
     tar -C /usr/local -xzf go.tar.gz && \
     rm go.tar.gz
 
-# Install Cloudflare Tunnel (cloudflared)
-RUN ARCH=$(dpkg --print-architecture) && \
-    curl -L --output cloudflared.deb "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${ARCH}.deb" && \
-    dpkg -i cloudflared.deb && \
-    rm cloudflared.deb
-
 # Install GitHub CLI (gh)
 RUN mkdir -p -m 755 /etc/apt/keyrings && \
     wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null && \
