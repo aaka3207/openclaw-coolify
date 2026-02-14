@@ -1,4 +1,4 @@
-FROM searxng/searxng:2024.11.17-23b2887e4
+FROM searxng/searxng:2026.2.13-97e572728
 
 # Copy configuration files directly into the image
 COPY searxng/settings.yml /etc/searxng/settings.yml
