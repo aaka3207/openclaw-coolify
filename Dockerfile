@@ -26,11 +26,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     gnupg \
     ripgrep fd-find fzf bat \
-    pandoc \
-    poppler-utils \
-    ffmpeg \
-    imagemagick \
-    graphviz \
     sqlite3 \
     pass \
     unzip \
