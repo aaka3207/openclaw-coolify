@@ -33,7 +33,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     graphviz \
     sqlite3 \
     pass \
-    chromium \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
@@ -87,8 +86,7 @@ ARG BUN_VERSION=1.1.42
 RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}"
 
 # Python tools
-RUN pip3 install ipython csvkit openpyxl python-docx pypdf botasaurus browser-use playwright --break-system-packages && \
-    playwright install-deps
+RUN pip3 install ipython csvkit openpyxl python-docx pypdf botasaurus --break-system-packages
 
 # Configure QMD Persistence
 ENV XDG_CACHE_HOME="/data/.cache"
@@ -109,7 +107,7 @@ ENV OPENCLAW_BETA=${OPENCLAW_BETA} \
 RUN --mount=type=cache,target=/data/.bun/install/cache \
     bun install -g https://github.com/tobi/qmd && hash -r && \
     bun pm -g untrusted && \
-    bun install -g @hyperbrowser/agent clawhub
+    bun install -g clawhub
 
 # Install OpenClaw with npm cache mount
 RUN --mount=type=cache,target=/data/.npm \
