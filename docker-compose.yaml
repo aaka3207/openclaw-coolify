@@ -8,6 +8,32 @@ services:
       REGISTRY_HTTP_SECRET: ${SERVICE_BASE64_REGISTRY}
     networks:
       - internal
+
+  postgres-memory:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    volumes:
+      - postgres-memory-data:/var/lib/postgresql/data
+    networks:
+      - internal
+    environment:
+      POSTGRES_USER: openclaw
+      POSTGRES_PASSWORD: ${POSTGRES_MEMORY_PASSWORD}
+      POSTGRES_DB: openclaw_memory
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=128MB"
+      - "-c"
+      - "work_mem=4MB"
+      - "-c"
+      - "effective_cache_size=256MB"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "openclaw", "-d", "openclaw_memory"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   openclaw:
     build:
       context: .
@@ -61,6 +87,13 @@ services:
       NANOBANANA_API_KEY: ${NANOBANANA_API_KEY}
       ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY}
 
+      # NOVA Memory (PostgreSQL)
+      NOVA_MEMORY_DB_HOST: postgres-memory
+      NOVA_MEMORY_DB_PORT: "5432"
+      NOVA_MEMORY_DB_USER: openclaw
+      NOVA_MEMORY_DB_PASSWORD: ${POSTGRES_MEMORY_PASSWORD}
+      NOVA_MEMORY_DB_NAME: openclaw_memory
+
       SERVICE_URL_OPENCLAW_18789: null
       SERVICE_URL_OPENCLAWWEBHOOK_8788: null
       BASE_URL: 'https://${SERVICE_FQDN_OPENCLAW}'
@@ -91,6 +124,7 @@ services:
 
     depends_on:
       - docker-proxy
+      - postgres-memory
 
     networks:
       - internal
@@ -154,3 +188,4 @@ volumes:
   openclaw-data:
   searxng-data:
   registry-data:
+  postgres-memory-data:
