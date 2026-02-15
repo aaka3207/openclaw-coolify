@@ -193,6 +193,26 @@ if [ -f /app/scripts/recover_sandbox.sh ]; then
 fi
 
 # ----------------------------
+# BWS Secrets Injection
+# ----------------------------
+if [ -n "${BWS_ACCESS_TOKEN:-}" ]; then
+  bash /app/scripts/fetch-bws-secrets.sh
+fi
+if [ -f /data/.openclaw/secrets.env ]; then
+  set -a
+  source /data/.openclaw/secrets.env
+  set +a
+  echo "[bws] loaded $(wc -l < /data/.openclaw/secrets.env) secrets"
+fi
+
+# Start BWS secrets refresh cron (every 5 min)
+if [ -n "${BWS_ACCESS_TOKEN:-}" ] && command -v bws &>/dev/null; then
+  (crontab -l 2>/dev/null; echo "*/5 * * * * BWS_ACCESS_TOKEN=\"${BWS_ACCESS_TOKEN}\" BWS_CRON=1 bash /app/scripts/fetch-bws-secrets.sh >> /tmp/bws-cron.log 2>&1") | crontab -
+  cron 2>/dev/null || crond 2>/dev/null || true
+  echo "[bws] cron refresh enabled (every 5 min)"
+fi
+
+# ----------------------------
 # Run OpenClaw
 # ----------------------------
 ulimit -n 65535
