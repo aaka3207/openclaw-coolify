@@ -122,11 +122,11 @@ if [ ! -f "$CONFIG_FILE" ]; then
     "bind": "lan",
     "controlUi": {
       "enabled": true,
-      "allowInsecureAuth": false
+      "allowInsecureAuth": true
     },
     "trustedProxies": [
       "172.16.0.0/12",
-      "192.168.100.0/24"
+      "192.168.1.0/24"
     ],
     "tailscale": {
       "mode": "off",
