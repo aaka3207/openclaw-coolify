@@ -66,7 +66,7 @@ RUN --mount=type=cache,target=/data/.npm \
     if [ "$OPENCLAW_BETA" = "true" ]; then \
     npm install -g openclaw@beta; \
     else \
-    npm install -g openclaw; \
+    npm install -g openclaw@2026.2.13; \
     fi && \
     if command -v openclaw >/dev/null 2>&1; then \
     echo "✅ openclaw binary found"; \
