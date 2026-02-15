@@ -68,7 +68,7 @@ services:
       # Bootstrap controls
       OPENCLAW_AUTO_BOOTSTRAP: "1"
       OPENCLAW_PRINT_ACCESS: "1"
-      GATEWAY_TRUSTED_PROXIES: '172.16.0.0/12,192.168.100.0/24'
+      GATEWAY_TRUSTED_PROXIES: '172.16.0.0/12,192.168.1.0/24'
       # Fix for EMFILE/Inotify issues in Docker
       CHOKIDAR_USEPOLLING: "true"
       # Public URL Access
@@ -85,6 +85,9 @@ services:
 
       # Secure: Socket mount removed in favor of proxy
       # - /var/run/docker.sock:/var/run/docker.sock
+
+    ports:
+      - "18789:18789"
 
     depends_on:
       - docker-proxy
