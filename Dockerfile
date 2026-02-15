@@ -91,7 +91,7 @@ RUN ln -sf /data/.claude/bin/claude /usr/local/bin/claude 2>/dev/null || true &&
 
 # SECURITY: Create non-root user for runtime
 RUN groupadd -r openclaw && useradd -r -g openclaw -d /data -s /bin/bash openclaw && \
-    mkdir -p /data && chown -R openclaw:openclaw /data && \
+    mkdir -p /data && chown openclaw:openclaw /data && \
     # Scripts must be readable but not writable by openclaw user
     chown -R root:root /app/scripts/ && chmod -R 755 /app/scripts/
 
