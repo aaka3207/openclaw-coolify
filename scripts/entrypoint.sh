@@ -6,12 +6,15 @@ set -e
 # --- Privileged operations (must run as root) ---
 echo "[entrypoint] Starting privileged setup..."
 
-# Fix volume ownership (non-recursive to avoid HDD stalls on large dirs)
-for dir in /data/.local /data/.cache /data/.config; do
+# Fix volume ownership — openclaw user must own /data and key subdirs
+# Non-recursive for large dirs to avoid HDD stalls
+chown openclaw:openclaw /data 2>/dev/null || true
+for dir in /data/.local /data/.cache /data/.config /data/.openclaw /data/.openclaw/credentials; do
   [ -d "$dir" ] && chown openclaw:openclaw "$dir" 2>/dev/null || true
 done
-# Recursive only for small dirs that need it
+# Recursive for small dirs + config files that must be readable
 chown -R openclaw:openclaw /data/.openclaw/agents 2>/dev/null || true
+chown openclaw:openclaw /data/.openclaw/*.json /data/.openclaw/*.txt /data/.openclaw/*.env 2>/dev/null || true
 
 # Start cron daemon (runs as root, executes crontab entries)
 /usr/sbin/cron || echo "[entrypoint] WARNING: cron daemon failed to start"
