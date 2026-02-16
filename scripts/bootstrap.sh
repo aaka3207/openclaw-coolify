@@ -311,6 +311,33 @@ if [ -n "${NOVA_MEMORY_DB_HOST:-}" ]; then
         fi
       fi
     fi
+
+    # Enable session transcripts (required for catch-up processor)
+    if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
+      SESSION_MEMORY=$(jq -r '.experimental.sessionMemory // false' "$CONFIG_FILE" 2>/dev/null)
+      if [ "$SESSION_MEMORY" != "true" ]; then
+        jq '.experimental = (.experimental // {}) | .experimental.sessionMemory = true' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+        echo "[nova] Enabled session transcripts"
+      fi
+    fi
+
+    # Symlink nova-relationships into .openclaw for hook import paths
+    if [ -d "$NOVA_REL_DIR" ] && [ ! -L "/data/.openclaw/nova-relationships" ]; then
+      ln -sf "$NOVA_REL_DIR" /data/.openclaw/nova-relationships
+      echo "[nova] Symlinked nova-relationships"
+    fi
+
+    # Memory catch-up processor (workaround: message:received hook not yet implemented)
+    # Processes session transcripts every 5 min via cron
+    CATCHUP_SCRIPT="$NOVA_DIR/scripts/memory-catchup.sh"
+    if [ -f "$CATCHUP_SCRIPT" ]; then
+      chmod +x "$CATCHUP_SCRIPT"
+      CATCHUP_CRON="*/5 * * * * PGHOST=${NOVA_MEMORY_DB_HOST} PGPORT=${NOVA_MEMORY_DB_PORT} PGUSER=${NOVA_MEMORY_DB_USER} PGPASSWORD=${NOVA_MEMORY_DB_PASSWORD} PGDATABASE=${NOVA_MEMORY_DB_NAME} ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-} bash $CATCHUP_SCRIPT >> /tmp/nova-catchup.log 2>&1"
+      if ! crontab -l 2>/dev/null | grep -q "memory-catchup"; then
+        (crontab -l 2>/dev/null; echo "$CATCHUP_CRON") | crontab -
+        echo "[nova] Catch-up processor cron enabled (every 5 min)"
+      fi
+    fi
   fi
 fi
 # --- End NOVA Memory Installation ---
