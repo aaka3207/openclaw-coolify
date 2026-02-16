@@ -252,7 +252,7 @@ if [ -n "${NOVA_MEMORY_DB_HOST:-}" ]; then
       export PGDATABASE="${NOVA_MEMORY_DB_NAME}"
 
       if [ -x "./agent-install.sh" ]; then
-        ./agent-install.sh --non-interactive && echo "[nova] Schema applied" || echo "[nova] WARNING: agent-install.sh failed"
+        ./agent-install.sh && echo "[nova] Schema applied" || echo "[nova] WARNING: agent-install.sh failed"
       else
         echo "[nova] WARNING: agent-install.sh not found or not executable"
       fi
