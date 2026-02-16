@@ -49,8 +49,68 @@ ENV XDG_CACHE_HOME="/data/.cache"
 RUN ln -s /usr/bin/fdfind /usr/bin/fd || true && \
     ln -s /usr/bin/batcat /usr/bin/bat || true
 
+# Stage 2.5: Browser and tool dependencies (rarely changes, large layer)
+FROM runtimes AS browser-deps
+
+# System packages for browser automation and document processing
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
+    ffmpeg \
+    imagemagick \
+    pandoc \
+    poppler-utils \
+    graphviz \
+    && rm -rf /var/lib/apt/lists/*
+
+# Docker CE CLI (for sandbox management via docker-proxy)
+RUN install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y docker-ce-cli && \
+    rm -rf /var/lib/apt/lists/*
+
+# Go (architecture-aware install with SHA256 verification)
+ARG GO_VERSION=1.23.4
+ARG GO_SHA256_AMD64=6924efde5de86fe277676e929dc9917d466efa02fb934197bc2eba35d5680971
+ARG GO_SHA256_ARM64=16e5017863a7f6071f8f4f0c29a19f3b3c97f01a8e30e99901c4f00ef0195d47
+RUN GO_ARCH=$(dpkg --print-architecture) && \
+    if [ "$GO_ARCH" = "amd64" ]; then GO_SHA256="$GO_SHA256_AMD64"; \
+    elif [ "$GO_ARCH" = "arm64" ]; then GO_SHA256="$GO_SHA256_ARM64"; \
+    else echo "Unsupported architecture: $GO_ARCH" && exit 1; fi && \
+    curl -L "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tar.gz && \
+    echo "${GO_SHA256}  /tmp/go.tar.gz" | sha256sum -c - && \
+    tar -C /usr/local -xzf /tmp/go.tar.gz && \
+    rm /tmp/go.tar.gz
+
+# GitHub CLI
+RUN mkdir -p -m 755 /etc/apt/keyrings && \
+    wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null && \
+    chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y gh && \
+    rm -rf /var/lib/apt/lists/*
+
+# uv (Python tool manager, pinned version)
+ARG UV_VERSION=0.5.14
+RUN curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" -o /tmp/uv-install.sh && \
+    UV_INSTALL_DIR="/usr/local/bin" sh /tmp/uv-install.sh && rm /tmp/uv-install.sh
+
+# Python packages for web scraping and document processing
+# NOTE: botasaurus removed (CF bypass tool), browser-use kept for AI-driven scraping
+RUN pip3 install --break-system-packages \
+    ipython csvkit openpyxl python-docx pypdf \
+    browser-use playwright
+
+# Playwright system deps (installs browser support libraries for chromium)
+RUN playwright install-deps
+
 # Stage 3: Application dependencies (package installations)
-FROM runtimes AS dependencies
+FROM browser-deps AS dependencies
 
 # OpenClaw install
 ARG OPENCLAW_BETA=false
@@ -74,6 +134,11 @@ RUN --mount=type=cache,target=/data/.npm \
     echo "❌ OpenClaw install failed (binary 'openclaw' not found)"; \
     exit 1; \
     fi
+
+# Bun global packages (qmd for session memory, hyperbrowser for web agent)
+RUN --mount=type=cache,target=/data/.bun/install/cache \
+    bun install -g https://github.com/tobi/qmd && \
+    bun install -g @hyperbrowser/agent
 
 # Stage 4: Final application stage (changes frequently)
 FROM dependencies AS final
@@ -106,7 +171,7 @@ RUN groupadd -r openclaw && useradd -r -g openclaw -d /data -s /bin/bash opencla
     chown -R root:root /app/scripts/ && chmod -R 755 /app/scripts/
 
 # FINAL PATH
-ENV PATH="/usr/local/bin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin"
+ENV PATH="/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin"
 
 EXPOSE 18789
 # Start as root to fix volume permissions, start cron daemon, then drop to openclaw

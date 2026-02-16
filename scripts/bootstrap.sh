@@ -2,7 +2,7 @@
 set -e
 
 # Ensure PATH includes all required dirs (su drops Dockerfile ENV)
-export PATH="/usr/local/bin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin:$PATH"
+export PATH="/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin:$PATH"
 
 if [ -f "/app/scripts/migrate-to-data.sh" ]; then
     bash "/app/scripts/migrate-to-data.sh"
@@ -191,13 +191,9 @@ export OPENCLAW_STATE_DIR="$OPENCLAW_STATE"
 # ----------------------------
 # Sandbox setup
 # ----------------------------
-# Sandbox setup requires docker CLI (installed via post-deploy script)
-if command -v docker &>/dev/null; then
-  [ -f scripts/sandbox-setup.sh ] && bash scripts/sandbox-setup.sh
-  [ -f scripts/sandbox-browser-setup.sh ] && bash scripts/sandbox-browser-setup.sh
-else
-  echo "⏭️  Skipping sandbox setup (docker CLI not yet installed — run post-deploy script)"
-fi
+# Sandbox setup (docker CLI is baked into image)
+[ -f scripts/sandbox-setup.sh ] && bash scripts/sandbox-setup.sh
+[ -f scripts/sandbox-browser-setup.sh ] && bash scripts/sandbox-browser-setup.sh
 
 # ----------------------------
 # Recovery & Monitoring
