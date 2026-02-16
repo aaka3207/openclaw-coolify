@@ -216,6 +216,12 @@ fi
 # NOVA Memory Installation
 # ----------------------------
 if [ -n "${NOVA_MEMORY_DB_HOST:-}" ]; then
+  # Install psql client if not present (needed by agent-install.sh)
+  if ! command -v psql &>/dev/null; then
+    echo "[nova] Installing postgresql-client..."
+    apt-get update -qq && apt-get install -y -qq --no-install-recommends postgresql-client >/dev/null 2>&1 && echo "[nova] postgresql-client installed" || echo "[nova] WARNING: postgresql-client install failed"
+  fi
+
   echo "[nova] Waiting for PostgreSQL..."
   PG_READY=false
   for i in $(seq 1 30); do
