@@ -20,7 +20,7 @@ To ensure you operate at peak performance:
 
 ## Protocol Reinforcement 
 - **Web Search**: Use `/app/skills/web-utils/scripts/search.sh` for web_search
-- **Deep Scrape**: Use `/app/skills/web-utils/scripts/scrape.sh` or `/app/skills/web-utils/scripts/scrape_botasaurus.py` (scrape_botasaurus for Cloudflare bypass) for web_fetch.
+- **Deep Scrape**: Use `/app/skills/web-utils/scripts/scrape.sh` for web_fetch (supports curl and headless browser modes).
 
 ---
 

@@ -8,12 +8,12 @@ metadata:
       services: ["searxng"]
     install:
       # These are installed in Dockerfile, but listed here for documentation
-      - id: "summarize"
-        kind: "bun"
-        pkg: "@steipete/summarize"
-      - id: "botasaurus"
+      - id: "browser-use"
         kind: "pip"
-        pkg: "botasaurus"
+        pkg: "browser-use"
+      - id: "playwright"
+        kind: "pip"
+        pkg: "playwright"
 
 ---
 
@@ -36,7 +36,7 @@ Summarize the content of a URL (text or video) using AI.
 ```
 
 ### Advanced Scrape
-Fetch web content. Supports basic `curl`, `browser` (Headless Chromium), or `botasaurus` logic.
+Fetch web content. Supports basic `curl` or `browser` (Headless Chromium) modes.
 ```bash
 # Basic (fast)
 {baseDir}/scripts/scrape.sh --mode curl "https://example.com"

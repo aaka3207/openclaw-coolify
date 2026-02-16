@@ -124,14 +124,13 @@ Inside a sandbox container, you MAY install:
 • git
 • language dependencies
 • framework dependencies
-• developer tools (vercel, cloudflared, uv, etc.)
+• developer tools (uv, gh, etc.)
 
 Examples
 
 Node / Next.js
 
 npm install
-npm install -g vercel
 
 Python
 
@@ -139,12 +138,6 @@ pip install -r requirements.txt
 
 or
 uv pip install -r requirements.txt
-
-Cloudflare Tunnel (only if requested)
-
-curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
--o /usr/local/bin/cloudflared
-chmod +x /usr/local/bin/cloudflared
 
 ⸻
 
@@ -169,7 +162,7 @@ docker run -d
 --label openclaw.port=3001
 node:20-bookworm-slim
 
-⚠️ IMPORTANT: DO NOT expose ports via -p or --port. The cloud tunnel (cloudfunnel) running inside the container handles external access.
+Note: Sandbox containers are accessible via the Docker network. No port publishing (-p) needed -- Coolify handles routing.
 
 ⸻
 
@@ -186,12 +179,12 @@ VOLUME PERSISTENCE: Workspace volume (-v) hamesha mount karo taake code host par
 Docker does NOT provide application-level state. OpenClaw MUST manage its own state using lowdb for structured, local JSON persistence.
 
 State Location (Persistent)
-~/.openclaw/state/sandboxes.json
+/data/.openclaw/state/sandboxes.json
 
 Initialize lowdb (Logic Pattern)
 
 import { Low, JSONFile } from 'lowdb'
-const adapter = new JSONFile('~/.openclaw/state/sandboxes.json')
+const adapter = new JSONFile('/data/.openclaw/state/sandboxes.json')
 const db = new Low(adapter)
 await db.read()
 db.data ||= { sandboxes: {} }
@@ -201,7 +194,6 @@ The lowdb store tracks:
 • creation time
 • status (running/stopped)
 • ports (container & host)
-• public URLs (cloudflared/vercel)
 • expiration (expires_at)
 • restart history
 
@@ -213,7 +205,6 @@ db.data.sandboxes['openclaw-sandbox-blog'] = {
   language: "nextjs",
   status: "running",
   ports: { container: 3000, host: 3001 },
-  public: { enabled: true, url: "https://..." },
   expires_at: "2026-02-01T12:30:00Z"
 }
 await db.write()
@@ -251,16 +242,11 @@ Status
 
 ⸻
 
-🌐 Public Access Rules
-• Default: internal only
-• Public exposure ONLY on user request
-• Allowed methods:
-• cloudflared tunnel (temporary)
-• vercel deploy (production)
-
-⚠️ MANDATORY VERIFICATION: Before generating a final public URL, YOU MUST self-verify the service is running by checking for a 200 OK status on localhost (e.g., curl -I http://localhost:3000/health or root). Only THEN release the public URL.
-
-Captured public URLs MUST be stored in state.
+🏠 LAN Access Rules
+• Default: LAN-only access via Coolify reverse proxy
+• No public exposure or cloud deploys -- this is a home server
+• Sandbox containers are accessible only from the local network
+• Gateway binds to LAN (configured in openclaw.json gateway.bind = "lan")
 
 ⸻
 
@@ -278,6 +264,25 @@ skills/web-utils/scripts/scrape.sh
 
 ⸻
 
+🧠 Memory Architecture
+
+OpenClaw uses a two-tier memory system:
+
+**Session-Level (QMD):**
+- In-session context via qmd (bun global package)
+- Tracks conversation flow, working memory, session artifacts
+- Ephemeral -- scoped to the current session
+
+**Long-Term (NOVA Memory):**
+- PostgreSQL-backed persistent memory via NOVA Memory system
+- Stores: entities, relationships, facts, session summaries
+- Processes session transcripts every 5 minutes via cron catch-up
+- Location: /data/clawd/nova-memory/
+- Status: Infrastructure deployed, hook-based real-time capture blocked
+  (OpenClaw 2026.2.13 does not implement message:received hook event)
+
+⸻
+
 🔄 Recovery & Auto-Restart Protocol
 
 OpenClaw Gateway (main process) may restart, but sandbox containers persist on the host Docker daemon.
@@ -285,22 +290,19 @@ This section defines how to handle restarts and maintain service continuity.
 
 What Persists on OpenClaw Restart
 • ✅ Sandbox containers (running on host Docker)
-• ✅ Automation scripts (host processes)
 • ✅ Database files (volume-mounted)
 • ✅ Code files (workspace volumes)
 
 What Requires Recovery
-• ⚠️ Cloudflare tunnels (inside containers)
-• ⚠️ Public URLs (new tunnel = new URL)
 • ⚠️ Background services (if inside containers)
+• ⚠️ Application processes inside sandboxes
 
 Recovery Components
 
 State File (Mandatory)
-Location: ~/.openclaw/state/sandboxes.json
+Location: /data/.openclaw/state/sandboxes.json
 Tracks for each sandbox:
 • Container ID, name, project
-• Current public URL
 • Last recovery timestamp
 • Volume mounts
 • Auto-restart flags
@@ -309,15 +311,13 @@ Recovery Script
 Location: /app/scripts/recover_sandbox.sh
 Auto-runs on startup to:
 • Start stopped containers
-• Restart Flask/Node/service processes
-• Restart Cloudflare tunnels
-• Extract new public URLs
+• Restart application processes inside containers
 • Update state file
 
 Health Monitor
 Location: /app/scripts/monitor_sandbox.sh
 Continuous background process that:
-• Checks tunnel health every 5 minutes
+• Checks container health every 5 minutes
 • Verifies /health endpoint responds with 200 OK
 • Auto-triggers recovery if unhealthy
 • Logs to monitor.log
@@ -325,38 +325,23 @@ Continuous background process that:
 Recovery Workflow
 
 On OpenClaw Startup:
-1. Load state from ~/.openclaw/state/sandboxes.json
+1. Load state from /data/.openclaw/state/sandboxes.json
 2. Query Docker: docker ps --filter label=openclaw.managed=true
 3. For each sandbox in state:
 • Check if container running
-• Check if tunnel alive (curl public_url/health)
 • If DOWN → Run recovery script
-4. Update state with new URLs/status
+4. Update state
 5. Start health monitor (if not running)
 
 Manual Recovery:
 
 bash /app/scripts/recover_sandbox.sh
-Auto-Recovery Example
 
-# Health monitor detects tunnel down
-[2026-01-31 12:49] ⚠️  Tunnel unhealthy. Running recovery...
-
-# Recovery script runs
-🔄 Starting Sandbox Recovery...
-🔧 Starting Flask app...
-🌐 Starting Cloudflare Tunnel...
-✅ New tunnel URL: https://new-random-subdomain.trycloudflare.com
-📝 State updated
-
-# New URL saved to state file
 Recovery Script Responsibilities
 • Ensure container is running (docker start if needed)
 • Restart application process inside container
-• Restart Cloudflare tunnel
-• Wait for tunnel URL generation
 • Verify health endpoint (200 OK)
-• Update state file with new URL
+• Update state file
 • Display recovery summary
 
 State File Schema (Production Example)
@@ -370,16 +355,13 @@ State File Schema (Production Example)
       "ports": {"container": 8081, "host": null},
       "volume": "/data/openclaw-workspace/flask-app:/workspace",
       "created_at": "2026-01-31T12:48:27Z",
-      "public_url": "https://current-tunnel-url.trycloudflare.com",
-      "tunnel_auto_restart": true,
       "last_recovery": "2026-01-31T12:49:08Z"
     }
   }
 }
 Critical Rules
 • NEVER delete state file during cleanup
-• ALWAYS verify health (200 OK) before releasing public URL
-• UPDATE state immediately after URL changes
+• UPDATE state immediately after recovery
 • RUN recovery script on any suspected downtime
 
 ⸻
