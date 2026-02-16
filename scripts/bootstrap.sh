@@ -242,6 +242,12 @@ if [ -n "${NOVA_MEMORY_DB_HOST:-}" ]; then
       echo "[nova] Updated NOVA Memory"
     fi
 
+    # Ensure directories agent-install.sh needs are writable
+    mkdir -p /data/.local/share/nova 2>/dev/null || true
+
+    # Install Python deps for NOVA hooks (idempotent, fast if already installed)
+    pip3 install --quiet --break-system-packages psycopg2-binary anthropic openai 2>/dev/null && echo "[nova] Python deps installed" || echo "[nova] WARNING: Python deps install failed"
+
     # Run agent-install.sh with PG environment variables set (idempotent)
     cd "$NOVA_DIR" || { echo "[nova] WARNING: NOVA directory not found"; }
     if [ -d "$NOVA_DIR" ]; then
