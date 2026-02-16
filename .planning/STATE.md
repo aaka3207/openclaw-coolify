@@ -102,6 +102,12 @@ Recent decisions affecting current work:
 - Fix duplicate matrix plugin warning (spams every 30s)
 - Decide: upgrade OpenClaw, wait for fix, or implement workaround for hooks
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Update SOUL.md, BOOTSTRAP.md, web-utils skill, and move install-browser-deps into Dockerfile | 2026-02-16 | `f4c0740` | [1-update-soul-md-bootstrap-md-web-utils-sk](./quick/1-update-soul-md-bootstrap-md-web-utils-sk/) |
+
 ### Blockers/Concerns
 
 **Phase 1:** COMPLETE
