@@ -259,6 +259,10 @@ if [ -n "${NOVA_MEMORY_DB_HOST:-}" ]; then
       cd "$NOVA_REL_DIR" && git pull --rebase 2>/dev/null || true
       echo "[nova] Updated NOVA Relationships"
     fi
+    # Install nova-relationships entity-resolver deps (semantic-recall needs 'pg' package)
+    if [ -f "$NOVA_REL_DIR/lib/entity-resolver/package.json" ]; then
+      cd "$NOVA_REL_DIR/lib/entity-resolver" && npm install --omit=dev --quiet 2>/dev/null && echo "[nova] Entity-resolver deps installed" || echo "[nova] WARNING: Entity-resolver deps install failed"
+    fi
 
     # Ensure directories agent-install.sh needs are writable
     mkdir -p /data/.local/share/nova 2>/dev/null || true
