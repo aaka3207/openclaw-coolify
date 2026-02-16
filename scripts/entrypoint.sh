@@ -4,6 +4,7 @@
 set -e
 
 # --- Privileged operations (must run as root) ---
+echo "[entrypoint] Starting privileged setup..."
 
 # Fix volume ownership (non-recursive to avoid HDD stalls on large dirs)
 for dir in /data/.local /data/.cache /data/.config; do
@@ -13,7 +14,7 @@ done
 chown -R openclaw:openclaw /data/.openclaw/agents 2>/dev/null || true
 
 # Start cron daemon (runs as root, executes crontab entries)
-/usr/sbin/cron
+/usr/sbin/cron || echo "[entrypoint] WARNING: cron daemon failed to start"
 
 # Remove stale matrix plugin extensions (prevents duplicate plugin warning)
 rm -rf /data/.openclaw/extensions/matrix 2>/dev/null || true

@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-set -e
+set -eE
+trap 'echo "[bootstrap] FATAL: line $LINENO exited with code $?" >&2' ERR
 
 # NOTE: PATH is inherited from Dockerfile ENV via gosu (no PAM reset).
 # Only add paths not already present.
 export PATH="$PATH"
+echo "[bootstrap] Starting... (PID $$, user $(whoami))"
 
 if [ -f "/app/scripts/migrate-to-data.sh" ]; then
     bash "/app/scripts/migrate-to-data.sh"
@@ -387,4 +389,5 @@ echo "  2. Approve this machine: openclaw-approve"
 echo "  3. Start onboarding: openclaw onboard"
 echo ""
 echo "=================================================================="
+echo "[bootstrap] All setup complete, launching gateway..."
 exec openclaw gateway run
