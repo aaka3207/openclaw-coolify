@@ -42,6 +42,7 @@ Forked from `essamamdani/openclaw-coolify`. This fork applies security hardening
 - **SOUL.md**: Behavioral constraints for the AI agent. Prose-only, not technically enforced. The "Force" bypass has been removed. Forbidden targets are absolute.
 - **Network isolation**: `internal` network (no external access) for docker-proxy, searxng, registry. `proxy` network for openclaw outbound API calls.
 - **Non-root**: Container runs as `openclaw` user. Scripts in `/app/scripts/` are owned by root (read-only to openclaw).
+- **Browser deps**: Chromium, docker CLI, Go, gh, uv, playwright are baked into the Docker image via the `browser-deps` build stage. The post-deploy script `install-browser-deps.sh` is no longer needed.
 
 ## Key Files
 
@@ -59,6 +60,7 @@ Forked from `essamamdani/openclaw-coolify`. This fork applies security hardening
 | `skills/web-utils/scripts/scrape.sh` | Web scraping with SSRF protection |
 | `skills/web-utils/scripts/scrape_botasaurus.py` | Browser scraping (CF bypass removed) |
 | `skills/web-utils/scripts/scrape_browser_use.py` | AI scraper (injection-hardened prompt) |
+| `scripts/install-browser-deps.sh` | Deprecated -- deps baked into Dockerfile |
 | `SOUL.md` | AI agent behavioral rules (no bypass mechanism) |
 
 ## Testing After Changes
@@ -71,3 +73,4 @@ Forked from `essamamdani/openclaw-coolify`. This fork applies security hardening
 6. Verify SQL injection blocked: title with `'; DROP TABLE` rejected
 7. Verify recovery rejects non-openclaw container IDs
 8. Verify `openclaw-approve` prompts for confirmation
+9. Verify docker image builds: `docker build -t openclaw-test .`
