@@ -201,8 +201,8 @@ export OPENCLAW_STATE_DIR="$OPENCLAW_STATE"
 # Sandbox setup
 # ----------------------------
 # Sandbox setup (docker CLI is baked into image)
-[ -f scripts/sandbox-setup.sh ] && bash scripts/sandbox-setup.sh
-[ -f scripts/sandbox-browser-setup.sh ] && bash scripts/sandbox-browser-setup.sh
+[ -f scripts/sandbox-setup.sh ] && bash scripts/sandbox-setup.sh || echo "[sandbox] Base image setup failed (non-fatal)"
+[ -f scripts/sandbox-browser-setup.sh ] && bash scripts/sandbox-browser-setup.sh || echo "[sandbox] Browser image setup failed (non-fatal)"
 
 # ----------------------------
 # Recovery & Monitoring
