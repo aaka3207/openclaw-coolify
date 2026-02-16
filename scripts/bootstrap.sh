@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+# Ensure PATH includes all required dirs (su drops Dockerfile ENV)
+export PATH="/usr/local/bin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin:$PATH"
+
 if [ -f "/app/scripts/migrate-to-data.sh" ]; then
     bash "/app/scripts/migrate-to-data.sh"
 fi
