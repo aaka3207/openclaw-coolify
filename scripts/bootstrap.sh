@@ -217,42 +217,45 @@ fi
 # ----------------------------
 if [ -n "${NOVA_MEMORY_DB_HOST:-}" ]; then
   echo "[nova] Waiting for PostgreSQL..."
+  PG_READY=false
   for i in $(seq 1 30); do
-    if PGPASSWORD="${NOVA_MEMORY_DB_PASSWORD}" psql -h "${NOVA_MEMORY_DB_HOST}" -p "${NOVA_MEMORY_DB_PORT}" -U "${NOVA_MEMORY_DB_USER}" -d "${NOVA_MEMORY_DB_NAME}" -c "SELECT 1" >/dev/null 2>&1; then
+    if (echo > /dev/tcp/${NOVA_MEMORY_DB_HOST}/${NOVA_MEMORY_DB_PORT}) 2>/dev/null; then
       echo "[nova] PostgreSQL ready"
+      PG_READY=true
       break
-    fi
-    if [ "$i" -eq 30 ]; then
-      echo "[nova] ERROR: PostgreSQL not ready after 30 attempts, skipping NOVA Memory"
-      # Don't exit — OpenClaw should still start without memory
     fi
     sleep 2
   done
-
-  # Clone or update NOVA Memory to persistent volume
-  NOVA_DIR="/data/clawd/nova-memory"
-  if [ ! -d "$NOVA_DIR/.git" ]; then
-    mkdir -p /data/clawd
-    git clone https://github.com/NOVA-Openclaw/nova-memory.git "$NOVA_DIR" 2>/dev/null || echo "[nova] WARNING: git clone failed"
-    echo "[nova] Cloned NOVA Memory"
-  else
-    cd "$NOVA_DIR" && git pull --rebase 2>/dev/null || true
-    echo "[nova] Updated NOVA Memory"
+  if [ "$PG_READY" = "false" ]; then
+    echo "[nova] ERROR: PostgreSQL not ready after 30 attempts, skipping NOVA Memory"
   fi
 
-  # Run install.sh with PG environment variables set (idempotent)
-  cd "$NOVA_DIR" || { echo "[nova] WARNING: NOVA directory not found"; }
-  if [ -d "$NOVA_DIR" ]; then
-    export PGHOST="${NOVA_MEMORY_DB_HOST}"
-    export PGPORT="${NOVA_MEMORY_DB_PORT}"
-    export PGUSER="${NOVA_MEMORY_DB_USER}"
-    export PGPASSWORD="${NOVA_MEMORY_DB_PASSWORD}"
-    export PGDATABASE="${NOVA_MEMORY_DB_NAME}"
-
-    if [ -x "./install.sh" ]; then
-      ./install.sh --non-interactive && echo "[nova] Schema applied" || echo "[nova] WARNING: install.sh failed"
+  if [ "$PG_READY" = "true" ]; then
+    # Clone or update NOVA Memory to persistent volume
+    NOVA_DIR="/data/clawd/nova-memory"
+    if [ ! -d "$NOVA_DIR/.git" ]; then
+      mkdir -p /data/clawd
+      git clone https://github.com/NOVA-Openclaw/nova-memory.git "$NOVA_DIR" 2>/dev/null || echo "[nova] WARNING: git clone failed"
+      echo "[nova] Cloned NOVA Memory"
     else
-      echo "[nova] WARNING: install.sh not found or not executable"
+      cd "$NOVA_DIR" && git pull --rebase 2>/dev/null || true
+      echo "[nova] Updated NOVA Memory"
+    fi
+
+    # Run agent-install.sh with PG environment variables set (idempotent)
+    cd "$NOVA_DIR" || { echo "[nova] WARNING: NOVA directory not found"; }
+    if [ -d "$NOVA_DIR" ]; then
+      export PGHOST="${NOVA_MEMORY_DB_HOST}"
+      export PGPORT="${NOVA_MEMORY_DB_PORT}"
+      export PGUSER="${NOVA_MEMORY_DB_USER}"
+      export PGPASSWORD="${NOVA_MEMORY_DB_PASSWORD}"
+      export PGDATABASE="${NOVA_MEMORY_DB_NAME}"
+
+      if [ -x "./agent-install.sh" ]; then
+        ./agent-install.sh --non-interactive && echo "[nova] Schema applied" || echo "[nova] WARNING: agent-install.sh failed"
+      else
+        echo "[nova] WARNING: agent-install.sh not found or not executable"
+      fi
     fi
   fi
 fi
