@@ -250,6 +250,16 @@ if [ -n "${NOVA_MEMORY_DB_HOST:-}" ]; then
       echo "[nova] Updated NOVA Memory"
     fi
 
+    # Clone or update NOVA Relationships (semantic-recall hook depends on /data/nova-relationships/)
+    NOVA_REL_DIR="/data/nova-relationships"
+    if [ ! -d "$NOVA_REL_DIR/.git" ]; then
+      git clone https://github.com/NOVA-Openclaw/nova-relationships.git "$NOVA_REL_DIR" 2>/dev/null || echo "[nova] WARNING: nova-relationships clone failed"
+      echo "[nova] Cloned NOVA Relationships"
+    else
+      cd "$NOVA_REL_DIR" && git pull --rebase 2>/dev/null || true
+      echo "[nova] Updated NOVA Relationships"
+    fi
+
     # Ensure directories agent-install.sh needs are writable
     mkdir -p /data/.local/share/nova 2>/dev/null || true
 
