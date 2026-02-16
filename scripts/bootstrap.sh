@@ -142,6 +142,9 @@ if [ ! -f "$CONFIG_FILE" ]; then
     "allowRequestSessionKey": false,
     "allowedSessionKeyPrefixes": ["hook:"]
   },
+  "cron": {
+    "enabled": true
+  },
   "agents": {
     "defaults": {
       "workspace": "$WORKSPACE_DIR",
@@ -166,6 +169,15 @@ if [ ! -f "$CONFIG_FILE" ]; then
   }
 }
 EOF
+fi
+
+# Patch existing config: enable cron if not already set
+if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
+  CRON_ENABLED=$(jq -r '.cron.enabled // false' "$CONFIG_FILE" 2>/dev/null)
+  if [ "$CRON_ENABLED" != "true" ]; then
+    jq '.cron = (.cron // {}) | .cron.enabled = true' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Enabled cron in openclaw.json"
+  fi
 fi
 
 # ----------------------------
