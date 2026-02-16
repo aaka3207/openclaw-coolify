@@ -102,12 +102,11 @@ RUN curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" -o /tmp/uv-instal
 
 # Python packages for web scraping and document processing
 # NOTE: botasaurus removed (CF bypass tool), browser-use kept for AI-driven scraping
+# NOTE: playwright install-deps removed — chromium is already installed above,
+#       and install-deps adds ~200MB of GTK/Wayland libs that push build past 60min timeout
 RUN pip3 install --break-system-packages \
     ipython csvkit openpyxl python-docx pypdf \
     browser-use playwright
-
-# Playwright system deps (installs browser support libraries for chromium)
-RUN playwright install-deps
 
 # Stage 3: Application dependencies (package installations)
 FROM browser-deps AS dependencies
