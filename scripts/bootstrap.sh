@@ -115,6 +115,9 @@ if [ ! -f "$CONFIG_FILE" ]; then
     "allowBundled": [
       "*"
     ],
+    "load": {
+      "extraDirs": ["/app/skills"]
+    },
     "install": {
       "nodeManager": "npm"
     }
@@ -180,6 +183,12 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   if [ "$CRON_ENABLED" != "true" ]; then
     jq '.cron = (.cron // {}) | .cron.enabled = true' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Enabled cron in openclaw.json"
+  fi
+  # Patch: add /app/skills to skills.load.extraDirs if not already present
+  HAS_EXTRA_DIRS=$(jq -r '.skills.load.extraDirs // [] | index("/app/skills") // empty' "$CONFIG_FILE" 2>/dev/null)
+  if [ -z "$HAS_EXTRA_DIRS" ]; then
+    jq '.skills.load = (.skills.load // {}) | .skills.load.extraDirs = ((.skills.load.extraDirs // []) + ["/app/skills"] | unique)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Added /app/skills to skills.load.extraDirs"
   fi
 fi
 
