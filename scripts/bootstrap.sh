@@ -312,12 +312,11 @@ if [ -n "${NOVA_MEMORY_DB_HOST:-}" ]; then
       fi
     fi
 
-    # Enable session transcripts (required for catch-up processor)
+    # Clean up invalid config keys from previous runs
     if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
-      SESSION_MEMORY=$(jq -r '.experimental.sessionMemory // false' "$CONFIG_FILE" 2>/dev/null)
-      if [ "$SESSION_MEMORY" != "true" ]; then
-        jq '.experimental = (.experimental // {}) | .experimental.sessionMemory = true' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-        echo "[nova] Enabled session transcripts"
+      if jq -e '.experimental' "$CONFIG_FILE" &>/dev/null; then
+        jq 'del(.experimental)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+        echo "[nova] Removed invalid 'experimental' key from config"
       fi
     fi
 
