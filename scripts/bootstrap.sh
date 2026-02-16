@@ -302,6 +302,15 @@ if [ -n "${NOVA_MEMORY_DB_HOST:-}" ]; then
       export PGPASSWORD="${NOVA_MEMORY_DB_PASSWORD}"
       export PGDATABASE="${NOVA_MEMORY_DB_NAME}"
 
+      # Generate postgres.json (required by nova-memory v2.1+)
+      PG_JSON="${HOME}/.openclaw/postgres.json"
+      mkdir -p "$(dirname "$PG_JSON")"
+      cat > "$PG_JSON" <<PGJSON
+{"host":"${NOVA_MEMORY_DB_HOST}","port":${NOVA_MEMORY_DB_PORT},"database":"${NOVA_MEMORY_DB_NAME}","user":"${NOVA_MEMORY_DB_USER}","password":"${NOVA_MEMORY_DB_PASSWORD}"}
+PGJSON
+      chmod 600 "$PG_JSON"
+      echo "[nova] Generated postgres.json"
+
       if [ -x "./agent-install.sh" ]; then
         ./agent-install.sh && echo "[nova] Schema applied" || echo "[nova] WARNING: agent-install.sh failed"
       else

@@ -15,6 +15,10 @@ done
 # Recursive for small dirs + config files that must be readable
 chown -R openclaw:openclaw /data/.openclaw/agents 2>/dev/null || true
 chown openclaw:openclaw /data/.openclaw/*.json /data/.openclaw/*.txt /data/.openclaw/*.env 2>/dev/null || true
+# NOVA dirs (cloned by previous root-based runs)
+for dir in /data/clawd /data/nova-relationships; do
+  [ -d "$dir" ] && chown -R openclaw:openclaw "$dir" 2>/dev/null || true
+done
 
 # Start cron daemon (runs as root, executes crontab entries)
 /usr/sbin/cron || echo "[entrypoint] WARNING: cron daemon failed to start"
