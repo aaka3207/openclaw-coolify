@@ -109,5 +109,5 @@ RUN groupadd -r openclaw && useradd -r -g openclaw -d /data -s /bin/bash opencla
 ENV PATH="/usr/local/bin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin"
 
 EXPOSE 18789
-# Start as root to fix volume permissions from pre-non-root era, then drop to openclaw
-CMD ["bash", "-c", "chown -R openclaw:openclaw /data/.local /data/.cache /data/.config 2>/dev/null; exec su openclaw -s /bin/bash -c 'bash /app/scripts/bootstrap.sh'"]
+# Start as root to fix volume permissions, start cron daemon, then drop to openclaw
+CMD ["bash", "-c", "chown -R openclaw:openclaw /data/.local /data/.cache /data/.config 2>/dev/null; chown -R openclaw:openclaw /data/.openclaw/agents 2>/dev/null; cron; exec su openclaw -s /bin/bash -c 'bash /app/scripts/bootstrap.sh'"]
