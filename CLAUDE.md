@@ -24,7 +24,7 @@ Forked from `essamamdani/openclaw-coolify`. This fork applies security hardening
 - [x] Pin SearXNG base image
 
 ### Phase 3: Dockerfile Hardening
-- [x] Add non-root runtime user
+- [ ] ~~Add non-root runtime user~~ (reverted — persistent volume chown issues outweigh benefit for LAN-only)
 - [x] Pin install versions + integrity checks (Go checksum, uv, bun)
 - [x] Remove NPM_CONFIG_UNSAFE_PERM
 
@@ -41,7 +41,7 @@ Forked from `essamamdani/openclaw-coolify`. This fork applies security hardening
 - **Credentials**: Core AI keys (OPENAI, ANTHROPIC) stay as env vars. Deployment tokens (VERCEL, CF_TUNNEL) are written to credential files at boot and unset from environment.
 - **SOUL.md**: Behavioral constraints for the AI agent. Prose-only, not technically enforced. The "Force" bypass has been removed. Forbidden targets are absolute.
 - **Network isolation**: `internal` network (no external access) for docker-proxy, searxng, registry. `proxy` network for openclaw outbound API calls.
-- **Non-root**: Container runs as `openclaw` user. Scripts in `/app/scripts/` are owned by root (read-only to openclaw).
+- **Runtime**: Container runs as root (matching upstream). Non-root was attempted but reverted due to persistent volume ownership issues on HDD.
 - **Browser deps**: Chromium, docker CLI, Go, gh, uv, playwright are baked into the Docker image via the `browser-deps` build stage. The post-deploy script `install-browser-deps.sh` is no longer needed.
 
 ## Key Files
@@ -49,7 +49,7 @@ Forked from `essamamdani/openclaw-coolify`. This fork applies security hardening
 | File | Purpose |
 |------|---------|
 | `docker-compose.yaml` | Service definitions, proxy config, networks |
-| `Dockerfile` | Multi-stage build, runtime user, install pins |
+| `Dockerfile` | Multi-stage build, install pins |
 | `scripts/bootstrap.sh` | Container entrypoint, config generation, credential isolation |
 | `scripts/recover_sandbox.sh` | Sandbox recovery with container ID validation |
 | `scripts/monitor_sandbox.sh` | 5-min health check loop (references /app/scripts/) |

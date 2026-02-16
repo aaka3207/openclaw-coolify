@@ -158,26 +158,14 @@ WORKDIR /app
 # This is the only layer that changes on code updates
 COPY . .
 
-# Specialized symlinks and permissions
+# Specialized symlinks, permissions, and /data directory
 RUN ln -sf /data/.claude/bin/claude /usr/local/bin/claude 2>/dev/null || true && \
     ln -sf /app/scripts/openclaw-approve.sh /usr/local/bin/openclaw-approve && \
-    chmod +x /app/scripts/*.sh /usr/local/bin/openclaw-approve
+    chmod +x /app/scripts/*.sh /usr/local/bin/openclaw-approve && \
+    mkdir -p /data
 
-# SECURITY: Create non-root user for runtime + install gosu for clean privilege drop
-RUN groupadd -r openclaw && useradd -r -g openclaw -d /data -s /bin/bash openclaw && \
-    mkdir -p /data && chown openclaw:openclaw /data && \
-    # Scripts must be readable but not writable by openclaw user
-    chown -R root:root /app/scripts/ && chmod -R 755 /app/scripts/ && \
-    # gosu: drop privileges without PAM (preserves ENV, no PATH reset)
-    GOSU_ARCH=$(dpkg --print-architecture) && \
-    curl -fsSL "https://github.com/tianon/gosu/releases/download/1.17/gosu-${GOSU_ARCH}" -o /usr/local/bin/gosu && \
-    chmod +x /usr/local/bin/gosu && \
-    gosu nobody true
-
-# FINAL PATH (includes /usr/sbin for cron daemon)
+# PATH (includes /usr/sbin for cron, /usr/local/go/bin for Go)
 ENV PATH="/usr/local/go/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin"
 
 EXPOSE 18789
-COPY scripts/entrypoint.sh /app/scripts/entrypoint.sh
-RUN chmod +x /app/scripts/entrypoint.sh
-ENTRYPOINT ["/app/scripts/entrypoint.sh"]
+CMD ["bash", "/app/scripts/bootstrap.sh"]

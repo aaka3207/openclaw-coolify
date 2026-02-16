@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
-set -eE
-trap 'echo "[bootstrap] FATAL: line $LINENO exited with code $?" >&2' ERR
+set -e
 
-# NOTE: PATH is inherited from Dockerfile ENV via gosu (no PAM reset).
-# Only add paths not already present.
-export PATH="$PATH"
-echo "[bootstrap] Starting... (PID $$, user $(whoami))"
+# Ensure PATH includes all tool directories
+export PATH="/usr/local/go/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin:$PATH"
 
 if [ -f "/app/scripts/migrate-to-data.sh" ]; then
     bash "/app/scripts/migrate-to-data.sh"
@@ -200,6 +197,15 @@ fi
 # Export state
 # ----------------------------
 export OPENCLAW_STATE_DIR="$OPENCLAW_STATE"
+
+# ----------------------------
+# System services
+# ----------------------------
+# Start cron daemon for periodic tasks (BWS refresh, NOVA catch-up)
+/usr/sbin/cron 2>/dev/null || true
+
+# Remove stale matrix plugin extensions (prevents duplicate plugin warning)
+rm -rf /data/.openclaw/extensions/matrix 2>/dev/null || true
 
 # ----------------------------
 # Sandbox setup
@@ -398,5 +404,4 @@ echo "  2. Approve this machine: openclaw-approve"
 echo "  3. Start onboarding: openclaw onboard"
 echo ""
 echo "=================================================================="
-echo "[bootstrap] All setup complete, launching gateway..."
 exec openclaw gateway run
