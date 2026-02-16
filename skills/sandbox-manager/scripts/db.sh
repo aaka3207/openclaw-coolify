@@ -2,7 +2,7 @@
 set -e
 
 # Configuration
-DB_PATH="$HOME/.openclaw/sandboxes.db"
+DB_PATH="${OPENCLAW_STATE_DIR:-/data/.openclaw}/sandboxes.db"
 mkdir -p "$(dirname "$DB_PATH")"
 
 # Initialize Schema

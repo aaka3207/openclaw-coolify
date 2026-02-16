@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-# Ensure PATH includes all required dirs (su drops Dockerfile ENV)
-export PATH="/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin:$PATH"
+# NOTE: PATH is inherited from Dockerfile ENV via gosu (no PAM reset).
+# Only add paths not already present.
+export PATH="$PATH"
 
 if [ -f "/app/scripts/migrate-to-data.sh" ]; then
     bash "/app/scripts/migrate-to-data.sh"
@@ -51,30 +52,31 @@ seed_agent() {
 
   mkdir -p "$dir"
 
-  # 🔒 NEVER overwrite existing SOUL.md
-  if [ -f "$dir/SOUL.md" ]; then
-    echo "🧠 SOUL.md already exists for $id — skipping"
-    return 0
-  fi
-
-  # ✅ MAIN agent gets ORIGINAL repo SOUL.md and BOOTSTRAP.md
+  # MAIN agent: sync SOUL.md and BOOTSTRAP.md from repo (hybrid approach)
+  # Repo is source of truth — copies when repo version differs from volume.
+  # UI edits survive until the next repo update changes the file.
   if [ "$id" = "main" ]; then
-    if [ -f "./SOUL.md" ] && [ ! -f "$dir/SOUL.md" ]; then
-      echo "✨ Copying original SOUL.md to $dir"
-      cp "./SOUL.md" "$dir/SOUL.md"
-    fi
-    if [ -f "./BOOTSTRAP.md" ] && [ ! -f "$dir/BOOTSTRAP.md" ]; then
-      echo "🚀 Seeding BOOTSTRAP.md to $dir"
-      cp "./BOOTSTRAP.md" "$dir/BOOTSTRAP.md"
-    fi
+    for doc in SOUL.md BOOTSTRAP.md; do
+      if [ -f "/app/$doc" ]; then
+        if [ ! -f "$dir/$doc" ]; then
+          echo "[seed] Copying $doc to $dir"
+          cp "/app/$doc" "$dir/$doc"
+        elif ! cmp -s "/app/$doc" "$dir/$doc"; then
+          echo "[seed] Updating $doc (repo version changed)"
+          cp "/app/$doc" "$dir/$doc"
+        fi
+      fi
+    done
     return 0
   fi
 
-  # fallback for other agents
-  cat >"$dir/SOUL.md" <<EOF
+  # fallback for other agents — only seed if missing
+  if [ ! -f "$dir/SOUL.md" ]; then
+    cat >"$dir/SOUL.md" <<EOF
 # SOUL.md - $name
 You are OpenClaw, a helpful and premium AI assistant.
 EOF
+  fi
 }
 
 seed_agent "main" "OpenClaw"
@@ -201,8 +203,8 @@ export OPENCLAW_STATE_DIR="$OPENCLAW_STATE"
 # Sandbox setup
 # ----------------------------
 # Sandbox setup (docker CLI is baked into image)
-[ -f scripts/sandbox-setup.sh ] && bash scripts/sandbox-setup.sh || echo "[sandbox] Base image setup failed (non-fatal)"
-[ -f scripts/sandbox-browser-setup.sh ] && bash scripts/sandbox-browser-setup.sh || echo "[sandbox] Browser image setup failed (non-fatal)"
+[ -f /app/scripts/sandbox-setup.sh ] && bash /app/scripts/sandbox-setup.sh || echo "[sandbox] Base image setup failed (non-fatal)"
+[ -f /app/scripts/sandbox-browser-setup.sh ] && bash /app/scripts/sandbox-browser-setup.sh || echo "[sandbox] Browser image setup failed (non-fatal)"
 
 # ----------------------------
 # Recovery & Monitoring
@@ -236,7 +238,6 @@ fi
 # Start BWS secrets refresh cron (every 5 min)
 if [ -n "${BWS_ACCESS_TOKEN:-}" ] && command -v bws &>/dev/null; then
   (crontab -l 2>/dev/null; echo "*/5 * * * * BWS_ACCESS_TOKEN=\"${BWS_ACCESS_TOKEN}\" BWS_CRON=1 bash /app/scripts/fetch-bws-secrets.sh >> /tmp/bws-cron.log 2>&1") | crontab -
-  cron 2>/dev/null || crond 2>/dev/null || true
   echo "[bws] cron refresh enabled (every 5 min)"
 fi
 

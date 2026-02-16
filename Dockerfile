@@ -135,7 +135,7 @@ RUN --mount=type=cache,target=/data/.npm \
     if [ "$OPENCLAW_BETA" = "true" ]; then \
     npm install -g openclaw@beta; \
     else \
-    npm install -g openclaw@2026.2.13; \
+    npm install -g openclaw@2026.2.15; \
     fi && \
     if command -v openclaw >/dev/null 2>&1; then \
     echo "✅ openclaw binary found"; \
@@ -163,15 +163,21 @@ RUN ln -sf /data/.claude/bin/claude /usr/local/bin/claude 2>/dev/null || true &&
     ln -sf /app/scripts/openclaw-approve.sh /usr/local/bin/openclaw-approve && \
     chmod +x /app/scripts/*.sh /usr/local/bin/openclaw-approve
 
-# SECURITY: Create non-root user for runtime
+# SECURITY: Create non-root user for runtime + install gosu for clean privilege drop
 RUN groupadd -r openclaw && useradd -r -g openclaw -d /data -s /bin/bash openclaw && \
     mkdir -p /data && chown openclaw:openclaw /data && \
     # Scripts must be readable but not writable by openclaw user
-    chown -R root:root /app/scripts/ && chmod -R 755 /app/scripts/
+    chown -R root:root /app/scripts/ && chmod -R 755 /app/scripts/ && \
+    # gosu: drop privileges without PAM (preserves ENV, no PATH reset)
+    GOSU_ARCH=$(dpkg --print-architecture) && \
+    curl -fsSL "https://github.com/tianon/gosu/releases/download/1.17/gosu-${GOSU_ARCH}" -o /usr/local/bin/gosu && \
+    chmod +x /usr/local/bin/gosu && \
+    gosu nobody true
 
-# FINAL PATH
-ENV PATH="/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin"
+# FINAL PATH (includes /usr/sbin for cron daemon)
+ENV PATH="/usr/local/go/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin"
 
 EXPOSE 18789
-# Start as root to fix volume permissions, start cron daemon, then drop to openclaw
-CMD ["bash", "-c", "chown -R openclaw:openclaw /data/.local /data/.cache /data/.config 2>/dev/null; chown -R openclaw:openclaw /data/.openclaw/agents 2>/dev/null; cron; exec su openclaw -s /bin/bash -c 'bash /app/scripts/bootstrap.sh'"]
+COPY scripts/entrypoint.sh /app/scripts/entrypoint.sh
+RUN chmod +x /app/scripts/entrypoint.sh
+ENTRYPOINT ["/app/scripts/entrypoint.sh"]
