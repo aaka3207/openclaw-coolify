@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** A secure, self-hosted AI agent that runs on my home server with proper secrets management and persistent memory — accessible only from my LAN.
-**Current focus:** Phase 4: Memory System (BLOCKED)
+**Current focus:** Entrypoint fix (gosu) → then Phase 5: n8n Integration
 
 ## Current Position
 
-Phase: 4 of 4 (Memory System)
-Plan: 04-01 complete, 04-02 blocked
-Status: BLOCKED — `message:received` hook event not implemented in OpenClaw 2026.2.13
-Last activity: 2026-02-16 — NOVA Memory infrastructure deployed, hooks blocked
+Phase: 4 of 5 (Memory System — partially working)
+Plan: 04-01 complete, 04-02 blocked (hooks), catch-up workaround validated
+Status: NOVA catch-up script works when cron daemon runs. Entrypoint fix needed for reliability.
+Last activity: 2026-02-16 — Build fixes, NOVA catch-up validated, entrypoint analysis complete
 
-Progress: [██████████████░] 75% (3/4 phases complete, Phase 4 infra done but hooks blocked)
+Progress: [██████████████░░░░░░] 75% (3/5 phases complete, Phase 4 partial, Phase 5 planned)
 
 ## Performance Metrics
 
@@ -98,15 +98,19 @@ Recent decisions affecting current work:
 ### Pending Todos
 
 - ~~Run post-deploy script for optional deps~~ (DONE: deps baked into Dockerfile via quick-1)
-- Resolve `message:received` hook event blocker for NOVA Memory
+- ~~Resolve `message:received` hook event blocker~~ (WORKAROUND: catch-up cron works, hooks still blocked)
+- **Replace `su` with `gosu` entrypoint** — root cause of PATH/cron/crash issues (see analysis below)
+- **Upgrade OpenClaw to 2026.2.15** — scope bug #16820 fixed, safe for our LAN setup
+- **Fix stale SOUL.md on volume** — bootstrap skips copy if exists, volume has pre-hardening version
 - Fix duplicate matrix plugin warning (spams every 30s)
-- Decide: upgrade OpenClaw, wait for fix, or implement workaround for hooks
+- Start cron daemon reliably after deploys (blocked on entrypoint fix)
 
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 1 | Update SOUL.md, BOOTSTRAP.md, web-utils skill, and move install-browser-deps into Dockerfile | 2026-02-16 | `f4c0740` | [1-update-soul-md-bootstrap-md-web-utils-sk](./quick/1-update-soul-md-bootstrap-md-web-utils-sk/) |
+| 2 | Move heavy installs to cached stage, remove @hyperbrowser/agent, fix sandbox crash loop | 2026-02-16 | `c39a0ad` | N/A (direct commits) |
 
 ### Blockers/Concerns
 
