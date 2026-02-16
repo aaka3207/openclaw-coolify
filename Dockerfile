@@ -144,10 +144,10 @@ RUN --mount=type=cache,target=/data/.npm \
     exit 1; \
     fi
 
-# Bun global packages (qmd for session memory, hyperbrowser for web agent)
+# Bun global packages (qmd for session memory)
+# NOTE: @hyperbrowser/agent removed — 18min install + crashes build container on HDD
 RUN --mount=type=cache,target=/data/.bun/install/cache \
-    bun install -g https://github.com/tobi/qmd && \
-    bun install -g @hyperbrowser/agent
+    bun install -g https://github.com/tobi/qmd
 
 # Stage 4: Final application stage (changes frequently)
 FROM dependencies AS final
