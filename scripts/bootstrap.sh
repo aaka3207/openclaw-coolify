@@ -134,6 +134,14 @@ if [ ! -f "$CONFIG_FILE" ]; then
     },
     "auth": { "mode": "token", "token": "$TOKEN" }
   },
+  "hooks": {
+    "enabled": false,
+    "token": "$TOKEN",
+    "path": "/hooks",
+    "defaultSessionKey": "hook:ingress",
+    "allowRequestSessionKey": false,
+    "allowedSessionKeyPrefixes": ["hook:"]
+  },
   "agents": {
     "defaults": {
       "workspace": "$WORKSPACE_DIR",
@@ -261,6 +269,17 @@ if [ -n "${NOVA_MEMORY_DB_HOST:-}" ]; then
         ./agent-install.sh && echo "[nova] Schema applied" || echo "[nova] WARNING: agent-install.sh failed"
       else
         echo "[nova] WARNING: agent-install.sh not found or not executable"
+      fi
+      # Ensure hooks.token exists if agent-install.sh enabled hooks
+      # (gateway crashes with "hooks.enabled requires hooks.token" otherwise)
+      if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
+        HOOKS_ENABLED=$(jq -r '.hooks.enabled // false' "$CONFIG_FILE" 2>/dev/null)
+        HOOKS_TOKEN=$(jq -r '.hooks.token // empty' "$CONFIG_FILE" 2>/dev/null)
+        if [ "$HOOKS_ENABLED" = "true" ] && [ -z "$HOOKS_TOKEN" ]; then
+          HOOKS_TOKEN=$(openssl rand -hex 24 2>/dev/null || node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")
+          jq --arg t "$HOOKS_TOKEN" '.hooks.token = $t | .hooks.path = (.hooks.path // "/hooks") | .hooks.defaultSessionKey = (.hooks.defaultSessionKey // "hook:ingress")' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+          echo "[nova] Patched hooks.token into config"
+        fi
       fi
     fi
   fi
