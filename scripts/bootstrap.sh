@@ -261,8 +261,12 @@ fi
 # ----------------------------
 # NOVA Memory Installation
 # ----------------------------
-if [ -n "${NOVA_MEMORY_DB_HOST:-}" ]; then
-  echo "[nova] Waiting for PostgreSQL..."
+# Set NOVA_MEMORY_ENABLED=true in Coolify to enable.
+# Currently disabled: message:received hook not implemented in OpenClaw through 2026.2.15.
+# Data was being extracted but never recalled — semantic-recall hook can't fire.
+# Re-enable when OpenClaw ships message:received (GitHub issue #8807).
+if [ "${NOVA_MEMORY_ENABLED:-false}" = "true" ] && [ -n "${NOVA_MEMORY_DB_HOST:-}" ]; then
+  echo "[nova] NOVA Memory enabled, waiting for PostgreSQL..."
   PG_READY=false
   for i in $(seq 1 30); do
     if (echo > /dev/tcp/${NOVA_MEMORY_DB_HOST}/${NOVA_MEMORY_DB_PORT}) 2>/dev/null; then
@@ -344,14 +348,6 @@ PGJSON
       fi
     fi
 
-    # Clean up invalid config keys from previous runs
-    if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
-      if jq -e '.experimental' "$CONFIG_FILE" &>/dev/null; then
-        jq 'del(.experimental)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-        echo "[nova] Removed invalid 'experimental' key from config"
-      fi
-    fi
-
     # Symlink nova-relationships into .openclaw for hook import paths
     if [ -d "$NOVA_REL_DIR" ] && [ ! -L "/data/.openclaw/nova-relationships" ]; then
       ln -sf "$NOVA_REL_DIR" /data/.openclaw/nova-relationships
@@ -370,6 +366,8 @@ PGJSON
       fi
     fi
   fi
+else
+  echo "[nova] NOVA Memory disabled (set NOVA_MEMORY_ENABLED=true to enable — waiting for issue #8807)"
 fi
 # --- End NOVA Memory Installation ---
 
