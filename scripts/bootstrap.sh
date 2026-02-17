@@ -23,14 +23,14 @@ chmod 700 "$OPENCLAW_STATE/credentials"
 CRED_DIR="$OPENCLAW_STATE/credentials"
 mkdir -p "$CRED_DIR"
 chmod 700 "$CRED_DIR"
-for var in GITHUB_TOKEN; do
+for var in GITHUB_TOKEN N8N_API_KEY; do
     if [ -n "${!var}" ]; then
         printf '%s' "${!var}" > "$CRED_DIR/$var"
         chmod 600 "$CRED_DIR/$var"
     fi
 done
 # Unset deployment tokens from environment (AI agent doesn't need them directly)
-unset GITHUB_TOKEN
+unset GITHUB_TOKEN N8N_API_KEY
 
 # Ensure data subdirectories exist (HOME=/data, no /root/ symlinks needed)
 for dir in .agents .ssh .config .local .cache .npm .bun .claude .kimi; do
@@ -79,6 +79,17 @@ EOF
 }
 
 seed_agent "main" "OpenClaw"
+
+# ----------------------------
+# Resolve Hooks Token (BWS-managed or auto-generated)
+# ----------------------------
+HOOKS_TOKEN=""
+if [ -f /data/.openclaw/secrets.env ]; then
+  HOOKS_TOKEN=$(grep '^OPENCLAW_HOOKS_TOKEN=' /data/.openclaw/secrets.env | cut -d= -f2- || true)
+fi
+if [ -z "$HOOKS_TOKEN" ]; then
+  HOOKS_TOKEN=$(openssl rand -hex 24 2>/dev/null || node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")
+fi
 
 # ----------------------------
 # Generate Config with Prime Directive
@@ -143,11 +154,11 @@ if [ ! -f "$CONFIG_FILE" ]; then
     "auth": { "mode": "token", "token": "$TOKEN" }
   },
   "hooks": {
-    "enabled": false,
-    "token": "$TOKEN",
+    "enabled": true,
+    "token": "$HOOKS_TOKEN",
     "path": "/hooks",
     "defaultSessionKey": "hook:ingress",
-    "allowRequestSessionKey": false,
+    "allowRequestSessionKey": true,
     "allowedSessionKeyPrefixes": ["hook:"]
   },
   "cron": {
@@ -199,6 +210,23 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   if [ -z "$HAS_EXTRA_DIRS" ]; then
     jq '.skills.load = (.skills.load // {}) | .skills.load.extraDirs = ((.skills.load.extraDirs // []) + ["/app/skills"] | unique)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Added /app/skills to skills.load.extraDirs"
+  fi
+  # Patch existing config: enable hooks with BWS token support
+  HOOKS_ENABLED=$(jq -r '.hooks.enabled // false' "$CONFIG_FILE" 2>/dev/null)
+  if [ "$HOOKS_ENABLED" != "true" ]; then
+    # Resolve hooks token from BWS or existing config
+    PATCH_HOOKS_TOKEN=""
+    if [ -f /data/.openclaw/secrets.env ]; then
+      PATCH_HOOKS_TOKEN=$(grep '^OPENCLAW_HOOKS_TOKEN=' /data/.openclaw/secrets.env | cut -d= -f2- || true)
+    fi
+    if [ -z "$PATCH_HOOKS_TOKEN" ]; then
+      PATCH_HOOKS_TOKEN=$(jq -r '.hooks.token // empty' "$CONFIG_FILE" 2>/dev/null)
+    fi
+    if [ -z "$PATCH_HOOKS_TOKEN" ]; then
+      PATCH_HOOKS_TOKEN=$(openssl rand -hex 24 2>/dev/null || node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")
+    fi
+    jq --arg t "$PATCH_HOOKS_TOKEN" '.hooks.enabled = true | .hooks.token = $t | .hooks.allowRequestSessionKey = true | .hooks.allowedSessionKeyPrefixes = ["hook:"]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Enabled hooks with token support"
   fi
 fi
 
