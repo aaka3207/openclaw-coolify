@@ -85,7 +85,8 @@ seed_agent "main" "OpenClaw"
 # ----------------------------
 if [ ! -f "$CONFIG_FILE" ]; then
   echo "🏥 Generating openclaw.json with Prime Directive..."
-  TOKEN=$(openssl rand -hex 24 2>/dev/null || node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")
+  # Use Coolify's OPENCLAW_GATEWAY_TOKEN if set, otherwise generate random
+  TOKEN="${OPENCLAW_GATEWAY_TOKEN:-$(openssl rand -hex 24 2>/dev/null || node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")}"
   cat >"$CONFIG_FILE" <<EOF
 {
 "commands": {
@@ -184,6 +185,14 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   if [ "$CRON_ENABLED" != "true" ]; then
     jq '.cron = (.cron // {}) | .cron.enabled = true' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Enabled cron in openclaw.json"
+  fi
+  # Patch: sync gateway token with OPENCLAW_GATEWAY_TOKEN env var (Coolify sets this)
+  if [ -n "${OPENCLAW_GATEWAY_TOKEN:-}" ]; then
+    CONFIG_TOKEN=$(jq -r '.gateway.auth.token // empty' "$CONFIG_FILE" 2>/dev/null)
+    if [ "$CONFIG_TOKEN" != "$OPENCLAW_GATEWAY_TOKEN" ]; then
+      jq --arg tok "$OPENCLAW_GATEWAY_TOKEN" '.gateway.auth.token = $tok' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+      echo "[config] Synced gateway token with OPENCLAW_GATEWAY_TOKEN env var"
+    fi
   fi
   # Patch: add /app/skills to skills.load.extraDirs if not already present
   HAS_EXTRA_DIRS=$(jq -r '.skills.load.extraDirs // [] | index("/app/skills") // empty' "$CONFIG_FILE" 2>/dev/null)
@@ -354,7 +363,7 @@ PGJSON
     CATCHUP_SCRIPT="$NOVA_DIR/scripts/memory-catchup.sh"
     if [ -f "$CATCHUP_SCRIPT" ]; then
       chmod +x "$CATCHUP_SCRIPT"
-      CATCHUP_CRON="*/5 * * * * PGHOST=${NOVA_MEMORY_DB_HOST} PGPORT=${NOVA_MEMORY_DB_PORT} PGUSER=${NOVA_MEMORY_DB_USER} PGPASSWORD=${NOVA_MEMORY_DB_PASSWORD} PGDATABASE=${NOVA_MEMORY_DB_NAME} ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-} bash $CATCHUP_SCRIPT >> /tmp/nova-catchup.log 2>&1"
+      CATCHUP_CRON="*/5 * * * * HOME=/data PGHOST=${NOVA_MEMORY_DB_HOST} PGPORT=${NOVA_MEMORY_DB_PORT} PGUSER=${NOVA_MEMORY_DB_USER} PGPASSWORD=${NOVA_MEMORY_DB_PASSWORD} PGDATABASE=${NOVA_MEMORY_DB_NAME} ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-} bash $CATCHUP_SCRIPT >> /tmp/nova-catchup.log 2>&1"
       if ! crontab -l 2>/dev/null | grep -q "memory-catchup"; then
         (crontab -l 2>/dev/null; echo "$CATCHUP_CRON") | crontab -
         echo "[nova] Catch-up processor cron enabled (every 5 min)"
@@ -363,6 +372,22 @@ PGJSON
   fi
 fi
 # --- End NOVA Memory Installation ---
+
+# ----------------------------
+# Fix Matrix plugin dependencies
+# ----------------------------
+# OpenClaw 2026.2.15 ships the matrix plugin with pnpm workspace:* refs
+# that npm can't resolve. Replace with wildcard and install deps.
+MATRIX_EXT="/usr/local/lib/node_modules/openclaw/extensions/matrix"
+if [ -f "$MATRIX_EXT/package.json" ]; then
+  if grep -q '"workspace:\*"' "$MATRIX_EXT/package.json" 2>/dev/null; then
+    sed -i 's/"workspace:\*"/"*"/g' "$MATRIX_EXT/package.json"
+    echo "[matrix] Fixed workspace:* refs in matrix plugin"
+  fi
+  if [ ! -d "$MATRIX_EXT/node_modules/@vector-im" ]; then
+    cd "$MATRIX_EXT" && npm install --omit=dev --quiet 2>/dev/null && echo "[matrix] Installed matrix plugin deps" || echo "[matrix] WARNING: npm install failed"
+  fi
+fi
 
 # ----------------------------
 # Run OpenClaw
