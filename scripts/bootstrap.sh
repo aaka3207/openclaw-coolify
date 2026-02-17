@@ -23,14 +23,14 @@ chmod 700 "$OPENCLAW_STATE/credentials"
 CRED_DIR="$OPENCLAW_STATE/credentials"
 mkdir -p "$CRED_DIR"
 chmod 700 "$CRED_DIR"
-for var in GITHUB_TOKEN N8N_API_KEY; do
+for var in GITHUB_TOKEN; do
     if [ -n "${!var}" ]; then
         printf '%s' "${!var}" > "$CRED_DIR/$var"
         chmod 600 "$CRED_DIR/$var"
     fi
 done
 # Unset deployment tokens from environment (AI agent doesn't need them directly)
-unset GITHUB_TOKEN N8N_API_KEY
+unset GITHUB_TOKEN
 
 # Ensure data subdirectories exist (HOME=/data, no /root/ symlinks needed)
 for dir in .agents .ssh .config .local .cache .npm .bun .claude .kimi; do
@@ -285,6 +285,16 @@ if [ -n "${BWS_ACCESS_TOKEN:-}" ] && command -v bws &>/dev/null; then
   (crontab -l 2>/dev/null; echo "*/5 * * * * BWS_ACCESS_TOKEN=\"${BWS_ACCESS_TOKEN}\" BWS_CRON=1 bash /app/scripts/fetch-bws-secrets.sh >> /tmp/bws-cron.log 2>&1") | crontab -
   echo "[bws] cron refresh enabled (every 5 min)"
 fi
+
+# Write BWS-sourced credentials to files (not available during early credential isolation)
+for var in N8N_API_KEY; do
+    if [ -n "${!var:-}" ]; then
+        printf '%s' "${!var}" > "$CRED_DIR/$var"
+        chmod 600 "$CRED_DIR/$var"
+        echo "[credentials] wrote BWS-sourced $var to credential file"
+        unset "$var"
+    fi
+done
 
 # ----------------------------
 # NOVA Memory Installation
