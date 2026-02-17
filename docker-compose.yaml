@@ -145,14 +145,14 @@ services:
     environment:
       LOG_LEVEL: warning
       # Security: Minimal Docker API access for sandbox management
-      CONTAINERS: 1 # List/inspect/create/start/stop containers
+      CONTAINERS: 1 # Container API endpoints
       IMAGES: 1     # Pull images
       VOLUMES: 1    # Create volumes for sandboxes
       INFO: 1       # Version check
       VERSION: 1
       EVENTS: 1     # Listen for events
+      POST: 1       # Required for container create/start/stop
       # SECURITY: The following are intentionally DISABLED (default 0)
-      # POST: 0     # No global POST override - granular perms above suffice
       # EXEC: 0     # No exec into arbitrary containers
       # NETWORKS: 0 # No network manipulation
     networks:
