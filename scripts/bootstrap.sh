@@ -175,11 +175,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
       },
       "maxConcurrent": 4,
       "sandbox": {
-        "mode": "non-main",
-        "scope": "session",
-        "browser": {
-          "enabled": true
-        }
+        "mode": "off"
       }
     },
     "list": [
