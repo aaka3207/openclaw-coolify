@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** A secure, self-hosted AI agent that runs on my home server with proper secrets management and persistent memory — accessible only from my LAN.
-**Current focus:** Phase 5: n8n Integration -- COMPLETE
+**Current focus:** Phase 6: Agent Orchestration -- IN PROGRESS
 
 ## Current Position
 
-Phase: 5 of 5 (n8n Integration -- COMPLETE)
-Plan: 05-01 complete, 05-02 complete
-Status: All Phase 5 plans complete. n8n-manager skill created with API wrapper and 4 action scripts.
-Last activity: 2026-02-17 — Create n8n-manager skill with list, create, execute, activate workflow scripts
+Phase: 6 of 6 (Agent Orchestration -- IN PROGRESS)
+Plan: 06-01 created, 06-02 created, 06-03 created (not yet executed)
+Status: Phase 6 plans written and revised. Pending execution.
+Last activity: 2026-02-20 — Phase 6 plans created; ACIP defenses installed in SOUL.md; OpenClaw upgraded to 2026.2.17
 
-Progress: [████████████████████] 100% (5/5 phases complete)
+Progress: [████████████████████] 83% (5/6 phases complete, 6th in progress)
 
 ## Performance Metrics
 
@@ -111,6 +111,10 @@ Recent decisions affecting current work:
 - Matrix plugin missing `@vector-im/matrix-bot-sdk` — upstream 2026.2.15 issue, not our bug
 - Remove debug logging (ERR trap, extra echo statements) from bootstrap.sh once fully stable
 - Verify NOVA memory catch-up cron is running under gosu/openclaw user
+- Install mcpporter skill: `npx playbooks add skill openclaw/skills --skill mcporter`
+- Upgrade OpenClaw to 2026.2.19 (security fix: path containment for plugins/hooks)
+- Execute Phase 6 plans (06-01, 06-02, 06-03)
+- Push committed changes: SOUL.md (ACIP), BOOTSTRAP.md (persistence rules)
 
 ### Quick Tasks Completed
 
@@ -125,6 +129,11 @@ Recent decisions affecting current work:
 **Phase 1:** COMPLETE
 **Phase 2:** COMPLETE
 **Phase 3:** COMPLETE
+
+**Phase 6 (Agent Orchestration — PLANNED):**
+- Plans written: 06-01 (task router), 06-02 (sub-agent memory isolation), 06-03 (NOVA filter + session types)
+- Architecture research done: claudedocs/openclaw-agent-memory-architecture.md
+- Not yet executed
 
 **Phase 4 (PARTIAL — infrastructure deployed, hooks still blocked):**
 - `message:received` hook event still NOT IMPLEMENTED in 2026.2.15 — workaround via catch-up cron
@@ -146,9 +155,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-17 — Phase 5 Plan 02: Create n8n-manager skill
-Stopped at: Completed 05-02-PLAN.md (commit a8679b2). All Phase 5 plans complete.
-Resume at: All phases complete. Consider next milestone or maintenance tasks.
+Last session: 2026-02-20 — Phase 6 plan creation + ACIP security hardening
+Stopped at: 06-01, 06-02, 06-03 PLAN.md files written and revised. Not yet executed.
+Resume at: `/gsd:execute-phase 06-agent-orchestration` OR install mcpporter skill OR upgrade OpenClaw to 2026.2.19
 Resume file: None
 
 ### Key Details
@@ -157,7 +166,7 @@ Resume file: None
 - Server LAN IP: 192.168.1.100
 - Gateway URL: http://192.168.1.100:18789
 - Gateway token: `b934d627a0dcc6a08c4e7a156067f865e54dba925beb0047`
-- OpenClaw version: 2026.2.15 (upgraded from 2026.2.13)
+- OpenClaw version: 2026.2.17 (upgraded from 2026.2.15). 2026.2.19 available — security fix (path containment), upgrade recommended.
 - Matrix homeserver: https://matrix.aakashe.org
 - Bot Matrix ID: @bot:matrix.aakashe.org
 - Bot device ID: LAXYMRZYNG
@@ -191,4 +200,4 @@ Resume file: None
 
 ---
 *State initialized: 2026-02-14*
-*Last updated: 2026-02-17 (Phase 5 complete -- all plans done)*
+*Last updated: 2026-02-20 (Phase 6 plans created, ACIP installed)*
