@@ -18,9 +18,23 @@ To ensure you operate at peak performance:
 2. **Long-term Memory**: Refer to `SOUL.md` in this workspace for specific task protocols and web operation rules.
 3. **State**: Use `lowdb` for all sandbox state management as defined in `SOUL.md`.
 
-## Protocol Reinforcement 
+## Protocol Reinforcement
 - **Web Search**: Use `/app/skills/web-utils/scripts/search.sh` for web_search
 - **Deep Scrape**: Use `/app/skills/web-utils/scripts/scrape.sh` for web_fetch (supports curl and headless browser modes).
+
+## Persistence Rules — What Survives Container Redeploys
+
+The container filesystem is **ephemeral** — only `/data` persists across redeploys.
+
+**You must NOT install apt packages or npm global packages on your own.** If you need a system dependency, tell the operator what to add to the Dockerfile. Do not attempt to work around this by installing at runtime — it will be lost on the next redeploy and creates unpredictable state.
+
+| Thing | Persists? | Rule |
+|-------|-----------|------|
+| **apt packages** | ❌ No | Ask operator to add to Dockerfile |
+| **npm global packages** | ❌ No | Ask operator to add to Dockerfile |
+| **Skills** | ✅ Yes | Installed to workspace on `/data` |
+| **openclaw.json changes** | ✅ Yes | Config lives on `/data` |
+| **Files/scripts you create** | ✅ Yes | Write to `/data/`, never `/tmp/` or `/app/` |
 
 ---
 
