@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 Phase: 6 of 6 (Agent Orchestration -- IN PROGRESS)
 Plan: 06-01 created, 06-02 created, 06-03 created (not yet executed)
 Status: Phase 6 plans written and revised. Pending execution.
-Last activity: 2026-02-20 — Phase 6 plans created; ACIP defenses installed in SOUL.md; OpenClaw upgraded to 2026.2.17
+Last activity: 2026-02-21 - Completed quick task 4: Research Claude Max vs Anthropic API compatibility for OpenClaw
 
 Progress: [████████████████████] 83% (5/6 phases complete, 6th in progress)
 
@@ -124,6 +124,7 @@ Recent decisions affecting current work:
 | 2 | Move heavy installs to cached stage, remove @hyperbrowser/agent, fix sandbox crash loop | 2026-02-16 | `c39a0ad` | N/A (direct commits) |
 | 3 | Gosu entrypoint + OpenClaw 2026.2.15 upgrade + NOVA permission/config fixes | 2026-02-16 | `b730f37` | N/A (direct commits) |
 | 4 | Research Claude Max vs Anthropic API compatibility for OpenClaw | 2026-02-21 | `a167a44` | [4-i-want-to-research-using-the-anthropic-c](./quick/4-i-want-to-research-using-the-anthropic-c/) |
+| 5 | Research QMD memory system: capabilities, live deployment status, comparison vs NOVA + built-in | 2026-02-21 | `512600f` | [5-research-how-to-make-openclaw-qmd-memory](./quick/5-research-how-to-make-openclaw-qmd-memory/) |
 
 ### Blockers/Concerns
 
@@ -156,8 +157,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-21 — Quick task 4: Claude Max vs API research
-Stopped at: quick-4 complete (RESEARCH.md + 4-SUMMARY.md). Phase 6 plans still pending execution.
+Last session: 2026-02-21 — Quick task 5: QMD vs NOVA memory research
+Stopped at: quick-5 complete (5-RESEARCH.md + 5-SUMMARY.md). Phase 6 plans still pending execution.
 Resume at: `/gsd:execute-phase 06-agent-orchestration` OR install mcpporter skill OR upgrade OpenClaw to 2026.2.19
 Resume file: None
 
