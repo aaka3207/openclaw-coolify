@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: Secrets Management** - Replace env vars with Bitwarden vault references
 - [ ] **Phase 4: Memory System** - Add NOVA Memory with PostgreSQL + pgvector
 - [ ] **Phase 5: n8n Integration** - Bidirectional n8n ↔ OpenClaw via webhooks and API
-- [ ] **Phase 6: Agent Orchestration** - NOVA re-enablement, session architecture, shared memory, and token management
+- [ ] **Phase 6: Agent Orchestration** - Built-in memory, sub-agent model routing, agent memory discipline
 
 ## Phase Details
 
@@ -80,7 +80,7 @@ Plans:
 
 Plans:
 - [x] 04-01: Deploy PostgreSQL + pgvector and install NOVA Memory
-- [ ] 04-02: Enable NOVA hooks and validate memory extraction and recall (**SUPERSEDED by Phase 6** — message:received now available in 2026.2.17)
+- [ ] 04-02: Enable NOVA hooks and validate memory extraction and recall (**SUPERSEDED by Phase 6** — using built-in memorySearch instead)
 
 ### Phase 5: n8n Integration
 **Goal**: OpenClaw can create/manage n8n workflows and receive webhooks from n8n for event-driven automation
@@ -99,21 +99,20 @@ Plans:
 - [ ] 05-02-PLAN.md -- Create n8n-manager skill with API wrapper scripts
 
 ### Phase 6: Agent Orchestration
-**Goal**: OpenClaw has NOVA Memory re-enabled with message:received hooks, proper session architecture for isolated webhook/cron processing, shared memory across sessions via NOVA, and optimized token management
-**Depends on**: Phase 4 (NOVA infrastructure), Phase 5 (webhook endpoints)
-**Requirements**: MEMO-02, MEMO-03, MEMO-04 (from Phase 4), plus agent orchestration best practices
+**Goal**: OpenClaw uses built-in hybrid memory (BM25 + vector via memorySearch) to remember patterns and preferences across sessions. Sub-agents use Haiku for token efficiency. NOVA catch-up cron is cleaned up. Agent has clear instructions for memory discipline.
+**Depends on**: Phase 5 (completed)
+**Requirements**: Built-in memorySearch config, sub-agent model routing, agent instructions
 **Success Criteria** (what must be TRUE):
-  1. NOVA Memory hooks fire on message:received events (enabled by OpenClaw 2026.2.17)
-  2. Webhook/cron sessions are isolated from main chat sessions (no context pollution)
-  3. NOVA shared memory is accessible across all sessions (main, webhook, cron)
-  4. Token usage is managed appropriately (session limits, model selection per task type)
-  5. Memory extraction works end-to-end: message → entities → PostgreSQL → recall
-**Plans**: 3 plans
+  1. memorySearch is enabled in openclaw.json with OpenAI embeddings (text-embedding-3-small)
+  2. Sub-agents default to anthropic/claude-haiku-4-5
+  3. NOVA catch-up cron is removed from container crontab
+  4. AGENTS.md exists in workspace with memory read/write protocol
+  5. memory/patterns/ knowledge base has seed content for indexing
+**Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Sub-agent model routing jq patch + NOVA cron comment cleanup in bootstrap.sh
-- [ ] 06-02-PLAN.md — Enable NOVA_MEMORY_ENABLED in Coolify and verify full boot sequence
-- [ ] 06-03-PLAN.md — Hook manifest verification, end-to-end memory pipeline test, and human sign-off
+- [ ] 06-01-PLAN.md — memorySearch + subagents jq patches in bootstrap.sh, NOVA cron cleanup, deploy and verify
+- [ ] 06-02-PLAN.md — Create AGENTS.md memory protocol, seed memory/patterns/ knowledge base, verify memory_search
 
 ## Progress
 
@@ -127,10 +126,10 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Secrets Management | 1/1 | Complete | 2026-02-16 |
 | 4. Memory System | 1/2 | Unblocked | - |
 | 5. n8n Integration | 2/2 | Complete | 2026-02-17 |
-| 6. Agent Orchestration | 0/3 | In Progress | - |
+| 6. Agent Orchestration | 0/2 | In Progress | - |
 
-**Phase 4 Blocker RESOLVED:** OpenClaw 2026.2.17 implements `message:received` hook event. Phase 4's 04-02 plan can now execute. Phase 6 supersedes 04-02 with expanded scope (agent orchestration + session architecture).
+**Phase 6 PIVOTED:** Dropped NOVA memory approach (hooks broken, expensive, wrong use case). Now using OpenClaw built-in memorySearch (hybrid BM25 + vector) with OpenAI embeddings. NOVA PostgreSQL container stays in docker-compose but unused.
 
 ---
 *Roadmap created: 2026-02-14*
-*Last updated: 2026-02-18*
+*Last updated: 2026-02-21*
