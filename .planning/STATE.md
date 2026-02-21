@@ -123,6 +123,7 @@ Recent decisions affecting current work:
 | 1 | Update SOUL.md, BOOTSTRAP.md, web-utils skill, and move install-browser-deps into Dockerfile | 2026-02-16 | `f4c0740` | [1-update-soul-md-bootstrap-md-web-utils-sk](./quick/1-update-soul-md-bootstrap-md-web-utils-sk/) |
 | 2 | Move heavy installs to cached stage, remove @hyperbrowser/agent, fix sandbox crash loop | 2026-02-16 | `c39a0ad` | N/A (direct commits) |
 | 3 | Gosu entrypoint + OpenClaw 2026.2.15 upgrade + NOVA permission/config fixes | 2026-02-16 | `b730f37` | N/A (direct commits) |
+| 4 | Research Claude Max vs Anthropic API compatibility for OpenClaw | 2026-02-21 | `a167a44` | [4-i-want-to-research-using-the-anthropic-c](./quick/4-i-want-to-research-using-the-anthropic-c/) |
 
 ### Blockers/Concerns
 
@@ -155,8 +156,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-20 — Phase 6 plan creation + ACIP security hardening
-Stopped at: 06-01, 06-02, 06-03 PLAN.md files written and revised. Not yet executed.
+Last session: 2026-02-21 — Quick task 4: Claude Max vs API research
+Stopped at: quick-4 complete (RESEARCH.md + 4-SUMMARY.md). Phase 6 plans still pending execution.
 Resume at: `/gsd:execute-phase 06-agent-orchestration` OR install mcpporter skill OR upgrade OpenClaw to 2026.2.19
 Resume file: None
 
