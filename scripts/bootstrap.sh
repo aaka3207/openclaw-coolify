@@ -353,8 +353,26 @@ export OPENCLAW_STATE_DIR="$OPENCLAW_STATE"
 # Start cron daemon for periodic tasks (BWS refresh, NOVA catch-up)
 /usr/sbin/cron 2>/dev/null || true
 
-# Remove stale matrix plugin extensions (prevents duplicate plugin warning)
-rm -rf /data/.openclaw/extensions/matrix 2>/dev/null || true
+# Matrix plugin: install fixed copy to persistent volume (runs once, survives deploys)
+# The bundled copy at npm root has pnpm workspace:* refs npm can't resolve.
+# Install to /data/.openclaw/extensions/matrix (persistent volume) so npm install
+# only runs once ever, not on every deploy. Remove bundled copy to prevent duplicate warning.
+MATRIX_USER_EXT="/data/.openclaw/extensions/matrix"
+MATRIX_BUNDLED="/usr/local/lib/node_modules/openclaw/extensions/matrix"
+if [ ! -d "$MATRIX_USER_EXT/node_modules/@vector-im" ]; then
+  echo "[matrix] Installing matrix plugin to persistent volume (one-time)..."
+  mkdir -p "/data/.openclaw/extensions"
+  rm -rf "$MATRIX_USER_EXT" 2>/dev/null || true
+  cp -r "$MATRIX_BUNDLED" "$MATRIX_USER_EXT" 2>/dev/null || true
+  if [ -d "$MATRIX_USER_EXT" ]; then
+    sed -i 's/"workspace:\*"/"*"/g' "$MATRIX_USER_EXT/package.json" 2>/dev/null || true
+    cd "$MATRIX_USER_EXT" && npm install --omit=dev --quiet 2>/dev/null \
+      && echo "[matrix] Matrix plugin installed to persistent volume" \
+      || echo "[matrix] WARNING: matrix npm install failed"
+  fi
+fi
+# Remove bundled copy — user copy on volume takes precedence, prevents duplicate warning
+rm -rf "$MATRIX_BUNDLED" 2>/dev/null || true
 
 # ----------------------------
 # Sandbox setup
@@ -513,20 +531,6 @@ fi
 # --- End NOVA Memory Installation ---
 
 # ----------------------------
-# Fix Matrix plugin dependencies
-# ----------------------------
-# OpenClaw 2026.2.15 ships the matrix plugin with pnpm workspace:* refs
-# that npm can't resolve. Replace with wildcard and install deps.
-MATRIX_EXT="/usr/local/lib/node_modules/openclaw/extensions/matrix"
-if [ -f "$MATRIX_EXT/package.json" ]; then
-  if grep -q '"workspace:\*"' "$MATRIX_EXT/package.json" 2>/dev/null; then
-    sed -i 's/"workspace:\*"/"*"/g' "$MATRIX_EXT/package.json"
-    echo "[matrix] Fixed workspace:* refs in matrix plugin"
-  fi
-  if [ ! -d "$MATRIX_EXT/node_modules/@vector-im" ]; then
-    cd "$MATRIX_EXT" && npm install --omit=dev --quiet 2>/dev/null && echo "[matrix] Installed matrix plugin deps" || echo "[matrix] WARNING: npm install failed"
-  fi
-fi
 
 # ----------------------------
 # Run OpenClaw
