@@ -112,8 +112,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md -- memorySearch + subagents jq patches in bootstrap.sh, NOVA cron cleanup, deploy and verify
-- [ ] 06-02-PLAN.md -- Create AGENTS.md memory protocol, seed memory/patterns/ knowledge base, verify memory_search
+- [x] 06-01-PLAN.md -- memorySearch + subagents jq patches in bootstrap.sh, NOVA cron cleanup, deploy and verify
+- [x] 06-02-PLAN.md -- Create AGENTS.md memory protocol, seed memory/patterns/ knowledge base, verify memory_search
 
 ### Phase 7: Tailscale Integration
 **Goal**: OpenClaw gateway is accessible via HTTPS from anywhere via Tailscale Serve. Control UI works in browser. Temp loopback patches are removed. n8n and other services remain LAN-only.
@@ -144,10 +144,10 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 3. Secrets Management | 1/1 | Complete | 2026-02-16 |
 | 4. Memory System | 1/2 | Unblocked | - |
 | 5. n8n Integration | 2/2 | Complete | 2026-02-17 |
-| 6. Agent Orchestration | 0/2 | In Progress | - |
+| 6. Agent Orchestration | 2/2 | Complete | 2026-02-22 |
 | 7. Tailscale Integration | 0/2 | Planned | - |
 
-**Phase 6 PIVOTED:** Dropped NOVA memory approach (hooks broken, expensive, wrong use case). Now using OpenClaw built-in memorySearch (hybrid BM25 + vector) with OpenAI embeddings. NOVA PostgreSQL container stays in docker-compose but unused.
+**Phase 6 PIVOTED:** Dropped NOVA memory approach (hooks broken, expensive, wrong use case). Now using OpenClaw built-in memorySearch (hybrid BM25 + vector) with Gemini embeddings (free tier). NOVA PostgreSQL container stays in docker-compose but unused.
 
 ---
 *Roadmap created: 2026-02-14*

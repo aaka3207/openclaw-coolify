@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** A secure, self-hosted AI agent that runs on my home server with proper secrets management and persistent memory — accessible only from my LAN.
-**Current focus:** Phase 6: Agent Orchestration -- IN PROGRESS
+**Current focus:** Phase 7: Tailscale Integration -- PLANNED (requires user Tailscale setup)
 
 ## Current Position
 
-Phase: 6 of 6 (Agent Orchestration -- IN PROGRESS)
-Plan: 06-01 created, 06-02 created, 06-03 created (not yet executed)
-Status: Phase 6 plans written and revised. Pending execution.
-Last activity: 2026-02-22 - Quick task 10: Audit file path fixes from quick-9 + 06-02-PLAN.md
+Phase: 7 of 7 (Tailscale Integration -- PLANNED)
+Plan: 07-01 and 07-02 created and verified
+Status: Phase 6 complete. Phase 7 plans ready — awaiting user Tailscale account setup before execution.
+Last activity: 2026-02-22 - Phase 6 complete (06-01 + 06-02 done). Phase 7 planned (07-01 + 07-02).
 
-Progress: [████████████████████] 83% (5/6 phases complete, 6th in progress)
+Progress: [██████████████████░░] 86% (6/7 phases complete)
 
 ## Performance Metrics
 
@@ -164,9 +164,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-22 — Debugged sub-agent isSecureWebSocketUrl failure. Root cause: gateway.mode must be "remote" to activate remote.url lookup in sessions_spawn. Tailscale doesn't help (non-loopback IPs fail check). Applied TEMP patch (mode=remote + remote.token + --allow-unconfigured) and committed to git. Upstream fix tracked: CHANGELOG #22582 (not yet shipped as of 2026.2.21-2).
-Stopped at: bootstrap.sh committed. Sub-agents reaching gateway in live container (device pairing partially resolved).
-Resume at: Execute 06-02-PLAN.md (AGENTS.md + memory/patterns/ — confirmed NOT yet implemented by quick-10 audit).
+Last session: 2026-02-22 — Phase 6 complete. 06-02 executed: AGENTS.md + memory/patterns/ seeded to workspace. Phase 7 (Tailscale) fully planned: 07-01 (Dockerfile + bootstrap) + 07-02 (deploy verification). Plan checker ran; 3 blockers fixed. Also: symlink self-healing guard added to bootstrap.sh; ownership boundaries added to AGENTS.md + SOUL.md.
+Stopped at: Phase 7 plans finalized.
+Resume at: Execute Phase 7 — user must first complete Tailscale pre-setup (see 07-02-PLAN.md Task 1).
 Resume file: None
 
 ### Key Details
