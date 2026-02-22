@@ -247,17 +247,42 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     }' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Enabled memorySearch (openai/text-embedding-3-small, hybrid BM25+vector)"
   fi
-  # Patch: set sub-agent model defaults (Haiku for cost efficiency)
+  # Patch: set sub-agent model defaults (Haiku via OpenRouter for cost efficiency)
+  # Force-update if set to bare anthropic/ prefix (missing openrouter/)
   SUBAGENT_MODEL=$(jq -r '.agents.defaults.subagents.model.primary // empty' "$CONFIG_FILE" 2>/dev/null)
-  if [ -z "$SUBAGENT_MODEL" ]; then
+  if [ -z "$SUBAGENT_MODEL" ] || [ "$SUBAGENT_MODEL" = "anthropic/claude-haiku-4-5" ]; then
     jq '.agents.defaults.subagents = {
-      "model": {"primary": "anthropic/claude-haiku-4-5"},
+      "model": {"primary": "openrouter/anthropic/claude-haiku-4-5"},
       "maxSpawnDepth": 2,
       "maxChildrenPerAgent": 5,
       "maxConcurrent": 8,
       "archiveAfterMinutes": 60
     }' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Set sub-agent model to anthropic/claude-haiku-4-5"
+    echo "[config] Set sub-agent model to openrouter/anthropic/claude-haiku-4-5"
+  fi
+  # Patch: heartbeat model (cheap model for periodic keepalives)
+  HEARTBEAT_MODEL=$(jq -r '.agents.defaults.heartbeat.model // empty' "$CONFIG_FILE" 2>/dev/null)
+  if [ -z "$HEARTBEAT_MODEL" ]; then
+    jq '.agents.defaults.heartbeat.model = "openrouter/google/gemini-flash-1.5"' \
+      "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Set heartbeat model to openrouter/google/gemini-flash-1.5"
+  fi
+  # Patch: image/vision model (Gemini Flash for vision tasks)
+  IMAGE_MODEL=$(jq -r '.agents.defaults.imageModel // empty' "$CONFIG_FILE" 2>/dev/null)
+  if [ -z "$IMAGE_MODEL" ]; then
+    jq '.agents.defaults.imageModel = "openrouter/google/gemini-flash-1.5"' \
+      "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Set image model to openrouter/google/gemini-flash-1.5"
+  fi
+  # Patch: enrich fallback models (only if still using default single fallback)
+  FALLBACK_COUNT=$(jq -r '.agents.defaults.model.fallbacks | length' "$CONFIG_FILE" 2>/dev/null)
+  if [ "${FALLBACK_COUNT:-0}" -le 1 ]; then
+    jq '.agents.defaults.model.fallbacks = [
+      "openrouter/anthropic/claude-sonnet-4-5",
+      "openrouter/google/gemini-flash-1.5",
+      "openrouter/auto"
+    ]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Updated model fallbacks (sonnet → gemini-flash → auto)"
   fi
 fi
 
