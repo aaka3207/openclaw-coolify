@@ -134,15 +134,15 @@ Plans:
 - [ ] 07-02-PLAN.md -- Deploy verification checkpoint: Tailscale setup, Control UI HTTPS, sub-agent test, restart persistence
 
 ### Phase 8: The Organization — Director Workforce
-**Goal**: Autonomous AI workforce with 4 Director agents (Automation Supervisor, Budget CFO, Business Researcher, Workflow Worker), self-healing n8n error loop, Claude Code execution layer, QMD cross-agent memory, and institutional COMPANY_MEMORY.md. Note: Canonical n8n data feeds (email.received, monarch.transaction, etc.) are NOT in scope for Phase 8 — they are built on-demand via the Director Intake Process after Directors are running.
+**Goal**: Autonomous AI workforce with 3 persistent Director agents (Automation Supervisor, Budget CFO, Business Researcher) + ephemeral Workflow Workers via sessions_spawn, self-healing n8n error loop, Claude Code execution layer, built-in memorySearch with COMPANY_MEMORY.md extraPaths, and institutional memory via weekly retrospective cron. Note: Canonical n8n data feeds (email.received, monarch.transaction, etc.) are NOT in scope for Phase 8 — they are built on-demand via the Director Intake Process after Directors are running.
 **Depends on**: Phase 6 (Agent Orchestration)
 **Plans**: 5 plans
 
 Plans:
-- [ ] 08-01-PLAN.md -- Register Director agents in agents.list + seed workspace directories in bootstrap.sh
-- [ ] 08-02-PLAN.md -- Install Claude Code CLI on server + copy auth from Mac (human checkpoint)
+- [ ] 08-01-PLAN.md -- Bootstrap Automation Supervisor (only hardcoded Director) + add-director.sh + COMPANY_MEMORY.md extraPaths + weekly cron
+- [ ] 08-02-PLAN.md -- Install Claude Code CLI on server + configure auth for headless invocation (human checkpoint)
 - [ ] 08-03-PLAN.md -- Create n8n Global Error Trigger workflow routing to Automation Supervisor
-- [ ] 08-04-PLAN.md -- QMD multi-collection setup + COMPANY_MEMORY.md + weekly retrospective cron
+- [ ] 08-04-PLAN.md -- Onboard Budget CFO and Business Researcher Directors via add-director.sh (human-guided)
 - [ ] 08-05-PLAN.md -- End-to-end verification: deploy, test Director routing, validate infrastructure
 
 ## Progress
