@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 Phase: 6 of 6 (Agent Orchestration -- IN PROGRESS)
 Plan: 06-01 created, 06-02 created, 06-03 created (not yet executed)
 Status: Phase 6 plans written and revised. Pending execution.
-Last activity: 2026-02-22 - Quick task 9: Workspace symlink + sub-agent announce-back fix (dangerouslyDisableDeviceAuth TEMP)
+Last activity: 2026-02-22 - Quick task 10: Audit file path fixes from quick-9 + 06-02-PLAN.md
 
 Progress: [████████████████████] 83% (5/6 phases complete, 6th in progress)
 
@@ -131,6 +131,7 @@ Recent decisions affecting current work:
 | 7 | save to memory: sub-agent spawning fix, useAccessGroups, config lock pattern | 2026-02-22 | `2faae71` | [7-save-to-memory](./quick/7-save-to-memory/) |
 | 8 | Save sub-agent mode=remote patch, isSecureWebSocketUrl findings, upstream fix #22582 tracking | 2026-02-22 | `a108b7d` | [8-make-sure-this-whole-implementation-is-s](./quick/8-make-sure-this-whole-implementation-is-s/) |
 | 9 | Workspace symlink fix + sub-agent announce-back (dangerouslyDisableDeviceAuth TEMP) + QMD path | 2026-02-22 | `c35dbe2` | [9-fix-workspace-symlink-sub-agent-announce](./quick/9-fix-workspace-symlink-sub-agent-announce/) |
+| 10 | Audit: file path fixes from quick-9 + 06-02-PLAN.md vs bootstrap.sh reality — gap analysis | 2026-02-22 | `d561835` | [10-did-we-follow-the-plan-on-file-path-fixe](./quick/10-did-we-follow-the-plan-on-file-path-fixe/) |
 
 ### Blockers/Concerns
 
@@ -165,7 +166,7 @@ Recent decisions affecting current work:
 
 Last session: 2026-02-22 — Debugged sub-agent isSecureWebSocketUrl failure. Root cause: gateway.mode must be "remote" to activate remote.url lookup in sessions_spawn. Tailscale doesn't help (non-loopback IPs fail check). Applied TEMP patch (mode=remote + remote.token + --allow-unconfigured) and committed to git. Upstream fix tracked: CHANGELOG #22582 (not yet shipped as of 2026.2.21-2).
 Stopped at: bootstrap.sh committed. Sub-agents reaching gateway in live container (device pairing partially resolved).
-Resume at: Execute 06-02-PLAN.md (AGENTS.md + memory/patterns/).
+Resume at: Execute 06-02-PLAN.md (AGENTS.md + memory/patterns/ — confirmed NOT yet implemented by quick-10 audit).
 Resume file: None
 
 ### Key Details
