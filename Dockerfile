@@ -125,7 +125,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends cron postgresql
 # NOTE: @hyperbrowser/agent removed — 18min install + crashes build container on HDD
 RUN --mount=type=cache,target=/data/.bun/install/cache \
     bun install -g clawhub && \
-    bun install -g https://github.com/tobi/qmd
+    bun install -g https://github.com/tobi/qmd && \
+    npm install -g tsx && \
+    mkdir -p /app/node_modules && ln -sf /usr/local/lib/node_modules/tsx /app/node_modules/tsx
 
 # Stage 3: OpenClaw + MCP tools (thin layer — only rebuilds when versions change)
 # Separated from browser-deps so upgrading openclaw doesn't rebuild chromium/Go/pip (~15 min saved)
