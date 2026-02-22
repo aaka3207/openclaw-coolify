@@ -224,6 +224,41 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     jq --arg t "$PATCH_HOOKS_TOKEN" '.hooks.enabled = true | .hooks.token = $t | .hooks.allowRequestSessionKey = true | .hooks.allowedSessionKeyPrefixes = ["hook:"]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Enabled hooks with token support"
   fi
+  # Patch: enable built-in memorySearch with OpenAI embeddings (hybrid BM25+vector)
+  MEMORY_SEARCH=$(jq -r '.agents.defaults.memorySearch.enabled // false' "$CONFIG_FILE" 2>/dev/null)
+  if [ "$MEMORY_SEARCH" != "true" ]; then
+    jq '.agents.defaults.memorySearch = {
+      "enabled": true,
+      "provider": "openai",
+      "model": "text-embedding-3-small",
+      "sources": ["memory"],
+      "sync": {"watch": true, "onSearch": true, "onSessionStart": true},
+      "query": {
+        "maxResults": 10,
+        "minScore": 0.25,
+        "hybrid": {
+          "enabled": true,
+          "vectorWeight": 0.7,
+          "textWeight": 0.3,
+          "mmr": {"enabled": true, "lambda": 0.7},
+          "temporalDecay": {"enabled": true, "halfLifeDays": 30}
+        }
+      }
+    }' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Enabled memorySearch (openai/text-embedding-3-small, hybrid BM25+vector)"
+  fi
+  # Patch: set sub-agent model defaults (Haiku for cost efficiency)
+  SUBAGENT_MODEL=$(jq -r '.agents.defaults.subagents.model.primary // empty' "$CONFIG_FILE" 2>/dev/null)
+  if [ -z "$SUBAGENT_MODEL" ]; then
+    jq '.agents.defaults.subagents = {
+      "model": {"primary": "anthropic/claude-haiku-4-5"},
+      "maxSpawnDepth": 2,
+      "maxChildrenPerAgent": 5,
+      "maxConcurrent": 8,
+      "archiveAfterMinutes": 60
+    }' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Set sub-agent model to anthropic/claude-haiku-4-5"
+  fi
 fi
 
 # ----------------------------
@@ -388,17 +423,8 @@ PGJSON
       echo "[nova] Symlinked nova-relationships"
     fi
 
-    # Memory catch-up processor (workaround: message:received hook not yet implemented)
-    # Processes session transcripts every 5 min via cron
-    CATCHUP_SCRIPT="$NOVA_DIR/scripts/memory-catchup.sh"
-    if [ -f "$CATCHUP_SCRIPT" ]; then
-      chmod +x "$CATCHUP_SCRIPT"
-      CATCHUP_CRON="*/5 * * * * HOME=/data PGHOST=${NOVA_MEMORY_DB_HOST} PGPORT=${NOVA_MEMORY_DB_PORT} PGUSER=${NOVA_MEMORY_DB_USER} PGPASSWORD=${NOVA_MEMORY_DB_PASSWORD} PGDATABASE=${NOVA_MEMORY_DB_NAME} ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-} bash $CATCHUP_SCRIPT >> /tmp/nova-catchup.log 2>&1"
-      if ! crontab -l 2>/dev/null | grep -q "memory-catchup"; then
-        (crontab -l 2>/dev/null; echo "$CATCHUP_CRON") | crontab -
-        echo "[nova] Catch-up processor cron enabled (every 5 min)"
-      fi
-    fi
+    # Memory catch-up processor — DISABLED: using built-in memorySearch instead of NOVA hooks
+    # Legacy cron removed 2026-02-21. To clean stale entries: crontab -l | grep -v memory-catchup | crontab -
   fi
 else
   echo "[nova] NOVA Memory disabled (set NOVA_MEMORY_ENABLED=true to enable — waiting for issue #8807)"
