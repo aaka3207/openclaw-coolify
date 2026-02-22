@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 Phase: 6 of 6 (Agent Orchestration -- IN PROGRESS)
 Plan: 06-01 created, 06-02 created, 06-03 created (not yet executed)
 Status: Phase 6 plans written and revised. Pending execution.
-Last activity: 2026-02-22 - Quick task 8: Save sub-agent mode=remote patch + isSecureWebSocketUrl findings
+Last activity: 2026-02-22 - Quick task 9: Workspace symlink + sub-agent announce-back fix (dangerouslyDisableDeviceAuth TEMP)
 
 Progress: [████████████████████] 83% (5/6 phases complete, 6th in progress)
 
@@ -129,7 +129,8 @@ Recent decisions affecting current work:
 | 5 | Research QMD memory system: capabilities, live deployment status, comparison vs NOVA + built-in | 2026-02-21 | `512600f` | [5-research-how-to-make-openclaw-qmd-memory](./quick/5-research-how-to-make-openclaw-qmd-memory/) |
 | 6 | Execute Phase 6 Plan 06-01: memorySearch + subagents jq patches, NOVA cron disabled | 2026-02-22 | `83491f3` | [6-what-now](./quick/6-what-now/) |
 | 7 | save to memory: sub-agent spawning fix, useAccessGroups, config lock pattern | 2026-02-22 | `2faae71` | [7-save-to-memory](./quick/7-save-to-memory/) |
-| 8 | Save sub-agent mode=remote patch, isSecureWebSocketUrl findings, upstream fix #22582 tracking | 2026-02-22 | (this commit) | [8-make-sure-this-whole-implementation-is-s](./quick/8-make-sure-this-whole-implementation-is-s/) |
+| 8 | Save sub-agent mode=remote patch, isSecureWebSocketUrl findings, upstream fix #22582 tracking | 2026-02-22 | `a108b7d` | [8-make-sure-this-whole-implementation-is-s](./quick/8-make-sure-this-whole-implementation-is-s/) |
+| 9 | Workspace symlink fix + sub-agent announce-back (dangerouslyDisableDeviceAuth TEMP) + QMD path | 2026-02-22 | `c35dbe2` | [9-fix-workspace-symlink-sub-agent-announce](./quick/9-fix-workspace-symlink-sub-agent-announce/) |
 
 ### Blockers/Concerns
 
