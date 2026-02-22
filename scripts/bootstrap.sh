@@ -321,15 +321,9 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   # Patch: disable useAccessGroups so sub-agents get full operator scope without pairing
   jq '.commands.useAccessGroups = false' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
   echo "[config] Set commands.useAccessGroups=false (sub-agent scope fix)"
-  # TEMP: disable device auth at gateway level so sub-agent announce-back scope mismatch
-  # doesn't block reconnection. Sub-agents reconnect with operator.read token but device is
-  # paired with operator.write — OpenClaw blocks even scope reductions without re-pairing.
-  # Remove when CHANGELOG #22582 ships (upstream fix for loopback sub-agent scope bundles).
-  DEVICE_AUTH=$(jq -r '.gateway.dangerouslyDisableDeviceAuth // false' "$CONFIG_FILE" 2>/dev/null)
-  if [ "$DEVICE_AUTH" != "true" ]; then
-    jq '.gateway.dangerouslyDisableDeviceAuth = true' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Set gateway.dangerouslyDisableDeviceAuth=true (TEMP: sub-agent announce-back fix)"
-  fi
+  # NOTE: gateway.dangerouslyDisableDeviceAuth is NOT a valid gateway key in 2026.2.19+
+  # (causes "Unrecognized key" crash). Remove it if agent or previous bootstrap added it.
+  jq 'del(.gateway.dangerouslyDisableDeviceAuth)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
   # Patch: remove invalid commands keys if agent accidentally added them
   jq 'del(.commands.gateway) | del(.commands.restart)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 fi
