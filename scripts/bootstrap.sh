@@ -292,9 +292,11 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     jq ".gateway.remote = {\"url\": \"ws://127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789}\"}" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Set gateway.remote.url=ws://127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789} (sub-agent loopback)"
   fi
-  # Patch: disable gateway/restart tools so agent cannot modify gateway config or trigger restarts
-  jq '.commands.gateway = false | .commands.restart = false' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-  echo "[config] Disabled commands.gateway and commands.restart"
+  # Patch: disable useAccessGroups so sub-agents get full operator scope without pairing
+  jq '.commands.useAccessGroups = false' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+  echo "[config] Set commands.useAccessGroups=false (sub-agent scope fix)"
+  # Patch: remove invalid commands keys if agent accidentally added them
+  jq 'del(.commands.gateway) | del(.commands.restart)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 fi
 
 # Lock config read-only so agent cannot overwrite it via bash between boots
