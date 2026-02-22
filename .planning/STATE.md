@@ -127,6 +127,7 @@ Recent decisions affecting current work:
 | 4 | Research Claude Max vs Anthropic API compatibility for OpenClaw | 2026-02-21 | `a167a44` | [4-i-want-to-research-using-the-anthropic-c](./quick/4-i-want-to-research-using-the-anthropic-c/) |
 | 5 | Research QMD memory system: capabilities, live deployment status, comparison vs NOVA + built-in | 2026-02-21 | `512600f` | [5-research-how-to-make-openclaw-qmd-memory](./quick/5-research-how-to-make-openclaw-qmd-memory/) |
 | 6 | Execute Phase 6 Plan 06-01: memorySearch + subagents jq patches, NOVA cron disabled | 2026-02-22 | `83491f3` | [6-what-now](./quick/6-what-now/) |
+| 7 | Save Phase 6 sub-agent spawning and config findings to persistent project memory | 2026-02-22 | (docs only) | [7-save-to-memory](./quick/7-save-to-memory/) |
 
 ### Blockers/Concerns
 
@@ -159,9 +160,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-22 — Quick task 6: Execute Phase 6 Plan 06-01
-Stopped at: quick-6 complete. 06-01-SUMMARY.md created. 83491f3 pushed to main. Deploy in progress — server-side verification pending.
-Resume at: After deploy completes, verify memorySearch/subagents config via SSH. Then execute 06-02-PLAN.md.
+Last session: 2026-02-22 — Quick task 7: Save sub-agent spawning + config findings to MEMORY.md
+Stopped at: quick-7 complete. MEMORY.md has all 4 new Critical sections. Sub-agent fixes documented.
+Resume at: Execute 06-02-PLAN.md (AGENTS.md + memory/patterns/).
 Resume file: None
 
 ### Key Details
