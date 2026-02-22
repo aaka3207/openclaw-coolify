@@ -84,6 +84,23 @@ seed_agent() {
         fi
       fi
     done
+    # AGENTS.md: seed if missing only — agent's own version takes precedence
+    if [ -f "/app/AGENTS.md" ] && [ ! -f "$dir/AGENTS.md" ]; then
+      cp "/app/AGENTS.md" "$dir/AGENTS.md"
+      echo "[seed] Copied AGENTS.md to $dir"
+    fi
+    # memory/patterns/: seed missing files only — agent writes to these during operation
+    if [ -d "/app/memory/patterns" ]; then
+      mkdir -p "$dir/memory/patterns"
+      for pattern in /app/memory/patterns/*.md; do
+        local basename_file
+        basename_file=$(basename "$pattern")
+        if [ ! -f "$dir/memory/patterns/$basename_file" ]; then
+          cp "$pattern" "$dir/memory/patterns/$basename_file"
+          echo "[seed] Copied memory/patterns/$basename_file"
+        fi
+      done
+    fi
     return 0
   fi
 
