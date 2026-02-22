@@ -134,7 +134,7 @@ Plans:
 - [ ] 07-02-PLAN.md -- Deploy verification checkpoint: Tailscale setup, Control UI HTTPS, sub-agent test, restart persistence
 
 ### Phase 8: The Organization — Director Workforce
-**Goal**: Autonomous AI workforce with 4 Director agents (Automation Supervisor, Budget CFO, Business Researcher, Workflow Worker), self-healing n8n error loop, Claude Code execution layer, QMD cross-agent memory, and institutional COMPANY_MEMORY.md
+**Goal**: Autonomous AI workforce with 4 Director agents (Automation Supervisor, Budget CFO, Business Researcher, Workflow Worker), self-healing n8n error loop, Claude Code execution layer, QMD cross-agent memory, and institutional COMPANY_MEMORY.md. Note: Canonical n8n data feeds (email.received, monarch.transaction, etc.) are NOT in scope for Phase 8 — they are built on-demand via the Director Intake Process after Directors are running.
 **Depends on**: Phase 6 (Agent Orchestration)
 **Plans**: 5 plans
 
