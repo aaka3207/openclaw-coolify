@@ -242,13 +242,14 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     jq --arg t "$PATCH_HOOKS_TOKEN" '.hooks.enabled = true | .hooks.token = $t | .hooks.allowRequestSessionKey = true | .hooks.allowedSessionKeyPrefixes = ["hook:"]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Enabled hooks with token support"
   fi
-  # Patch: enable built-in memorySearch with OpenAI embeddings (hybrid BM25+vector)
-  MEMORY_SEARCH=$(jq -r '.agents.defaults.memorySearch.enabled // false' "$CONFIG_FILE" 2>/dev/null)
-  if [ "$MEMORY_SEARCH" != "true" ]; then
+  # Patch: enable built-in memorySearch with Gemini embeddings (free, hybrid BM25+vector)
+  # Force-update if provider is still set to openai (revoked key)
+  MEMORY_PROVIDER=$(jq -r '.agents.defaults.memorySearch.provider // empty' "$CONFIG_FILE" 2>/dev/null)
+  if [ "$MEMORY_PROVIDER" != "gemini" ]; then
     jq '.agents.defaults.memorySearch = {
       "enabled": true,
-      "provider": "openai",
-      "model": "text-embedding-3-small",
+      "provider": "gemini",
+      "model": "gemini-embedding-001",
       "sources": ["memory"],
       "sync": {"watch": true, "onSearch": true, "onSessionStart": true},
       "query": {
@@ -258,12 +259,13 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
           "enabled": true,
           "vectorWeight": 0.7,
           "textWeight": 0.3,
+          "candidateMultiplier": 4,
           "mmr": {"enabled": true, "lambda": 0.7},
           "temporalDecay": {"enabled": true, "halfLifeDays": 30}
         }
       }
     }' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Enabled memorySearch (openai/text-embedding-3-small, hybrid BM25+vector)"
+    echo "[config] Set memorySearch provider=gemini/gemini-embedding-001 (free, hybrid BM25+vector)"
   fi
   # Patch: set sub-agent model defaults (Haiku via OpenRouter for cost efficiency)
   # Force-update if set to bare anthropic/ prefix (missing openrouter/)
