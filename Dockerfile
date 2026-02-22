@@ -106,13 +106,10 @@ ARG UV_VERSION=0.5.14
 RUN curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" -o /tmp/uv-install.sh && \
     UV_INSTALL_DIR="/usr/local/bin" sh /tmp/uv-install.sh && rm /tmp/uv-install.sh
 
-# Python packages for web scraping and document processing
-# NOTE: botasaurus removed (CF bypass tool), browser-use kept for AI-driven scraping
-# NOTE: playwright install-deps removed — chromium is already installed above,
-#       and install-deps adds ~200MB of GTK/Wayland libs that push build past 60min timeout
+# Python packages for document processing
+# NOTE: botasaurus removed (CF bypass tool), browser-use + playwright removed (massive dep tree, build timeouts)
 RUN pip3 install --break-system-packages \
-    ipython csvkit openpyxl python-docx pypdf \
-    browser-use playwright
+    ipython csvkit openpyxl python-docx pypdf
 
 # cron + postgresql-client + BWS CLI (cached here to avoid rebuilding on every code change)
 ARG BWS_VERSION=1.0.0
