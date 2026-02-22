@@ -18,6 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 4: Memory System** - Add NOVA Memory with PostgreSQL + pgvector
 - [ ] **Phase 5: n8n Integration** - Bidirectional n8n ↔ OpenClaw via webhooks and API
 - [ ] **Phase 6: Agent Orchestration** - Built-in memory, sub-agent model routing, agent memory discipline
+- [ ] **Phase 7: Tailscale Integration** - Secure HTTPS access via Tailscale Serve, fix Control UI, clean up temp patches
 
 ## Phase Details
 
@@ -91,7 +92,7 @@ Plans:
   2. n8n can POST webhooks to OpenClaw that trigger agent actions
   3. OpenClaw agent can create, activate, and execute n8n workflows via API
   4. n8n API key is stored in BWS (not hardcoded)
-  5. Example flow works: Notion change → n8n webhook → OpenClaw processes it
+  5. Example flow works: Notion change -> n8n webhook -> OpenClaw processes it
 **Plans**: 2 plans
 
 Plans:
@@ -111,13 +112,30 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — memorySearch + subagents jq patches in bootstrap.sh, NOVA cron cleanup, deploy and verify
-- [ ] 06-02-PLAN.md — Create AGENTS.md memory protocol, seed memory/patterns/ knowledge base, verify memory_search
+- [ ] 06-01-PLAN.md -- memorySearch + subagents jq patches in bootstrap.sh, NOVA cron cleanup, deploy and verify
+- [ ] 06-02-PLAN.md -- Create AGENTS.md memory protocol, seed memory/patterns/ knowledge base, verify memory_search
+
+### Phase 7: Tailscale Integration
+**Goal**: OpenClaw gateway is accessible via HTTPS from anywhere via Tailscale Serve. Control UI works in browser. Temp loopback patches are removed. n8n and other services remain LAN-only.
+**Depends on**: Phase 6 (Agent Orchestration)
+**Requirements**: Tailscale in-container (binary copy from official image), gateway.bind=loopback, tailscale.mode=serve, TS_AUTHKEY in Coolify env
+**Success Criteria** (what must be TRUE):
+  1. Control UI is accessible from MacBook browser via HTTPS (Tailscale MagicDNS URL)
+  2. Sub-agents continue to work (loopback-native, no temp patch)
+  3. Temp patches removed from bootstrap.sh (mode=remote, remote.url, --allow-unconfigured)
+  4. n8n has NO Tailscale access -- LAN-only unchanged
+  5. Gateway survives container restart without re-auth (state persisted)
+  6. TS_AUTHKEY stored in Coolify env, not hardcoded
+**Plans**: 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md -- Dockerfile tailscale-install stage, bootstrap.sh tailscaled startup + config patches + temp removal, docker-compose env vars, connect-mac-node.sh update
+- [ ] 07-02-PLAN.md -- Deploy verification checkpoint: Tailscale setup, Control UI HTTPS, sub-agent test, restart persistence
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -127,9 +145,10 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 4. Memory System | 1/2 | Unblocked | - |
 | 5. n8n Integration | 2/2 | Complete | 2026-02-17 |
 | 6. Agent Orchestration | 0/2 | In Progress | - |
+| 7. Tailscale Integration | 0/2 | Planned | - |
 
 **Phase 6 PIVOTED:** Dropped NOVA memory approach (hooks broken, expensive, wrong use case). Now using OpenClaw built-in memorySearch (hybrid BM25 + vector) with OpenAI embeddings. NOVA PostgreSQL container stays in docker-compose but unused.
 
 ---
 *Roadmap created: 2026-02-14*
-*Last updated: 2026-02-21*
+*Last updated: 2026-02-22*
