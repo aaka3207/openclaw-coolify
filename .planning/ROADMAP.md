@@ -19,6 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: n8n Integration** - Bidirectional n8n ↔ OpenClaw via webhooks and API
 - [ ] **Phase 6: Agent Orchestration** - Built-in memory, sub-agent model routing, agent memory discipline
 - [ ] **Phase 7: Tailscale Integration** - Secure HTTPS access via Tailscale Serve, fix Control UI, clean up temp patches
+- [ ] **Phase 8: The Organization** - Autonomous Director workforce with self-healing n8n loop and cross-agent memory
 
 ## Phase Details
 
@@ -132,10 +133,22 @@ Plans:
 - [ ] 07-01-PLAN.md -- Dockerfile tailscale-install stage, bootstrap.sh tailscaled startup + config patches + temp removal, docker-compose env vars, connect-mac-node.sh update
 - [ ] 07-02-PLAN.md -- Deploy verification checkpoint: Tailscale setup, Control UI HTTPS, sub-agent test, restart persistence
 
+### Phase 8: The Organization — Director Workforce
+**Goal**: Autonomous AI workforce with 4 Director agents (Automation Supervisor, Budget CFO, Business Researcher, Workflow Worker), self-healing n8n error loop, Claude Code execution layer, QMD cross-agent memory, and institutional COMPANY_MEMORY.md
+**Depends on**: Phase 6 (Agent Orchestration)
+**Plans**: 5 plans
+
+Plans:
+- [ ] 08-01-PLAN.md -- Register Director agents in agents.list + seed workspace directories in bootstrap.sh
+- [ ] 08-02-PLAN.md -- Install Claude Code CLI on server + copy auth from Mac (human checkpoint)
+- [ ] 08-03-PLAN.md -- Create n8n Global Error Trigger workflow routing to Automation Supervisor
+- [ ] 08-04-PLAN.md -- QMD multi-collection setup + COMPANY_MEMORY.md + weekly retrospective cron
+- [ ] 08-05-PLAN.md -- End-to-end verification: deploy, test Director routing, validate infrastructure
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -146,6 +159,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 5. n8n Integration | 2/2 | Complete | 2026-02-17 |
 | 6. Agent Orchestration | 2/2 | Complete | 2026-02-22 |
 | 7. Tailscale Integration | 0/2 | Planned | - |
+| 8. The Organization | 0/5 | Planned | - |
 
 **Phase 6 PIVOTED:** Dropped NOVA memory approach (hooks broken, expensive, wrong use case). Now using OpenClaw built-in memorySearch (hybrid BM25 + vector) with Gemini embeddings (free tier). NOVA PostgreSQL container stays in docker-compose but unused.
 
