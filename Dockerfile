@@ -2,9 +2,15 @@
 # Multi-stage build for optimal caching with BuildKit
 # Each stage builds on the previous, with COPY . . only in the final stage
 # BuildKit features: cache mounts, parallel builds, improved layer caching
+#
+# Cache invalidation strategy:
+#   base/runtimes/browser-deps: only rebuild when system deps change (~15-20 min)
+#   openclaw: only rebuild when openclaw/mcporter version changes (~2-3 min)
+#   final: rebuilds on every git push (just COPY . .)
 
 # Stage 1: Base system dependencies (rarely changes)
-FROM node:lts-bookworm-slim AS base
+# Pinned to node:20 to prevent --pull from busting cache when lts tag moves
+FROM node:22-bookworm-slim AS base
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -118,19 +124,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends cron postgresql
     chmod +x /usr/local/bin/bws && \
     rm /tmp/bws.zip
 
-# Stage 3: Application dependencies (package installations)
-FROM browser-deps AS dependencies
+# ClawHub + QMD (rarely change — pin here so openclaw upgrades don't bust this layer)
+# NOTE: @hyperbrowser/agent removed — 18min install + crashes build container on HDD
+RUN --mount=type=cache,target=/data/.bun/install/cache \
+    bun install -g clawhub && \
+    bun install -g https://github.com/tobi/qmd
 
-# OpenClaw install
+# Stage 3: OpenClaw + MCP tools (thin layer — only rebuilds when versions change)
+# Separated from browser-deps so upgrading openclaw doesn't rebuild chromium/Go/pip (~15 min saved)
+FROM browser-deps AS openclaw-install
+
 ARG OPENCLAW_BETA=false
 ENV OPENCLAW_BETA=${OPENCLAW_BETA} \
     OPENCLAW_NO_ONBOARD=1
 
-# Install ClawHub with BuildKit cache mount for faster rebuilds
-RUN --mount=type=cache,target=/data/.bun/install/cache \
-    bun install -g clawhub
-
-# Install OpenClaw with npm cache mount
 RUN --mount=type=cache,target=/data/.npm \
     if [ "$OPENCLAW_BETA" = "true" ]; then \
     npm install -g openclaw@beta; \
@@ -145,13 +152,8 @@ RUN --mount=type=cache,target=/data/.npm \
     exit 1; \
     fi
 
-# Bun global packages (qmd for session memory)
-# NOTE: @hyperbrowser/agent removed — 18min install + crashes build container on HDD
-RUN --mount=type=cache,target=/data/.bun/install/cache \
-    bun install -g https://github.com/tobi/qmd
-
-# Stage 4: Final application stage (changes frequently)
-FROM dependencies AS final
+# Stage 4: Final application stage (changes on every git push)
+FROM openclaw-install AS final
 
 WORKDIR /app
 
