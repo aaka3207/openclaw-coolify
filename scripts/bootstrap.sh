@@ -292,6 +292,24 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     jq ".gateway.remote = {\"url\": \"ws://127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789}\"}" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Set gateway.remote.url=ws://127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789} (sub-agent loopback)"
   fi
+  # TEMP: set gateway.mode=remote so sub-agents resolve via remote.url (loopback)
+  # Without this, mode defaults to "local" and sessions_spawn ignores remote.url entirely.
+  # Remove when CHANGELOG #22582 ships (upstream fix for loopback sub-agent auth).
+  GATEWAY_MODE=$(jq -r '.gateway.mode // empty' "$CONFIG_FILE" 2>/dev/null)
+  if [ "$GATEWAY_MODE" != "remote" ]; then
+    jq '.gateway.mode = "remote"' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Set gateway.mode=remote (TEMP: sub-agent loopback fix)"
+  fi
+  # TEMP: set gateway.remote.token so sub-agents can auth when mode=remote
+  # Token must match OPENCLAW_GATEWAY_TOKEN (the value Coolify injects as env var).
+  # Remove when CHANGELOG #22582 ships.
+  if [ -n "${OPENCLAW_GATEWAY_TOKEN:-}" ]; then
+    REMOTE_TOKEN=$(jq -r '.gateway.remote.token // empty' "$CONFIG_FILE" 2>/dev/null)
+    if [ "$REMOTE_TOKEN" != "$OPENCLAW_GATEWAY_TOKEN" ]; then
+      jq --arg tok "$OPENCLAW_GATEWAY_TOKEN" '.gateway.remote.token = $tok' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+      echo "[config] Set gateway.remote.token from OPENCLAW_GATEWAY_TOKEN (TEMP: sub-agent auth)"
+    fi
+  fi
   # Patch: disable useAccessGroups so sub-agents get full operator scope without pairing
   jq '.commands.useAccessGroups = false' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
   echo "[config] Set commands.useAccessGroups=false (sub-agent scope fix)"
@@ -529,4 +547,6 @@ echo "  2. Approve this machine: openclaw-approve"
 echo "  3. Start onboarding: openclaw onboard"
 echo ""
 echo "=================================================================="
-exec openclaw gateway run
+# TEMP: --allow-unconfigured required when gateway.mode=remote without full remote config
+# Remove when CHANGELOG #22582 ships.
+exec openclaw gateway run --allow-unconfigured
