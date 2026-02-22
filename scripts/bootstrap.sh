@@ -263,26 +263,26 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   # Patch: heartbeat model (cheap model for periodic keepalives)
   HEARTBEAT_MODEL=$(jq -r '.agents.defaults.heartbeat.model // empty' "$CONFIG_FILE" 2>/dev/null)
   if [ -z "$HEARTBEAT_MODEL" ]; then
-    jq '.agents.defaults.heartbeat.model = "openrouter/google/gemini-flash-1.5"' \
+    jq '.agents.defaults.heartbeat.model = "openrouter/google/gemini-3-flash-preview"' \
       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Set heartbeat model to openrouter/google/gemini-flash-1.5"
+    echo "[config] Set heartbeat model to openrouter/google/gemini-3-flash-preview"
   fi
-  # Patch: image/vision model (Gemini Flash for vision tasks)
-  IMAGE_MODEL=$(jq -r '.agents.defaults.imageModel // empty' "$CONFIG_FILE" 2>/dev/null)
+  # Patch: image/vision model (must be object with primary key)
+  IMAGE_MODEL=$(jq -r '.agents.defaults.imageModel.primary // empty' "$CONFIG_FILE" 2>/dev/null)
   if [ -z "$IMAGE_MODEL" ]; then
-    jq '.agents.defaults.imageModel = "openrouter/google/gemini-flash-1.5"' \
+    jq '.agents.defaults.imageModel = {"primary": "openrouter/google/gemini-3-flash-preview"}' \
       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Set image model to openrouter/google/gemini-flash-1.5"
+    echo "[config] Set image model to openrouter/google/gemini-3-flash-preview"
   fi
   # Patch: enrich fallback models (only if still using default single fallback)
   FALLBACK_COUNT=$(jq -r '.agents.defaults.model.fallbacks | length' "$CONFIG_FILE" 2>/dev/null)
   if [ "${FALLBACK_COUNT:-0}" -le 1 ]; then
     jq '.agents.defaults.model.fallbacks = [
       "openrouter/anthropic/claude-sonnet-4-5",
-      "openrouter/google/gemini-flash-1.5",
+      "openrouter/google/gemini-3-flash-preview",
       "openrouter/auto"
     ]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Updated model fallbacks (sonnet → gemini-flash → auto)"
+    echo "[config] Updated model fallbacks (sonnet → gemini-3-flash-preview → auto)"
   fi
 fi
 
