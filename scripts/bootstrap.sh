@@ -4,6 +4,15 @@ set -e
 # Ensure PATH includes all tool directories
 export PATH="/usr/local/go/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin:$PATH"
 
+# Restore openclaw symlink if missing (can be corrupted by agent npm install)
+if ! command -v openclaw >/dev/null 2>&1; then
+  OPENCLAW_MJS="/usr/local/lib/node_modules/openclaw/openclaw.mjs"
+  if [ -f "$OPENCLAW_MJS" ]; then
+    ln -sf "$OPENCLAW_MJS" /usr/local/bin/openclaw 2>/dev/null || true
+    echo "[bootstrap] Restored missing openclaw symlink"
+  fi
+fi
+
 if [ -f "/app/scripts/migrate-to-data.sh" ]; then
     bash "/app/scripts/migrate-to-data.sh"
 fi
