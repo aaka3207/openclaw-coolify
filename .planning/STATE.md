@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 Phase: 6 of 6 (Agent Orchestration -- IN PROGRESS)
 Plan: 06-01 created, 06-02 created, 06-03 created (not yet executed)
 Status: Phase 6 plans written and revised. Pending execution.
-Last activity: 2026-02-22 - Completed quick task 6: Execute Phase 6 Plan 06-01 (memorySearch + subagents config patches)
+Last activity: 2026-02-22 - Quick task 8: Save sub-agent mode=remote patch + isSecureWebSocketUrl findings
 
 Progress: [████████████████████] 83% (5/6 phases complete, 6th in progress)
 
@@ -115,6 +115,7 @@ Recent decisions affecting current work:
 - Upgrade OpenClaw to 2026.2.19 (security fix: path containment for plugins/hooks)
 - ~~Execute Phase 6 plan 06-01~~ (DONE: memorySearch + subagents patches committed, deploy in progress)
 - Execute Phase 6 plans (06-02, 06-03) — 06-02 now unblocked
+- ~~**Sub-agent temp patch**~~ (DONE: committed in bootstrap.sh — gateway.mode=remote + remote.token + --allow-unconfigured). Remove when CHANGELOG #22582 ships (watch next release after 2026.2.21-2).
 - Push committed changes: SOUL.md (ACIP), BOOTSTRAP.md (persistence rules)
 
 ### Quick Tasks Completed
@@ -128,6 +129,7 @@ Recent decisions affecting current work:
 | 5 | Research QMD memory system: capabilities, live deployment status, comparison vs NOVA + built-in | 2026-02-21 | `512600f` | [5-research-how-to-make-openclaw-qmd-memory](./quick/5-research-how-to-make-openclaw-qmd-memory/) |
 | 6 | Execute Phase 6 Plan 06-01: memorySearch + subagents jq patches, NOVA cron disabled | 2026-02-22 | `83491f3` | [6-what-now](./quick/6-what-now/) |
 | 7 | save to memory: sub-agent spawning fix, useAccessGroups, config lock pattern | 2026-02-22 | `2faae71` | [7-save-to-memory](./quick/7-save-to-memory/) |
+| 8 | Save sub-agent mode=remote patch, isSecureWebSocketUrl findings, upstream fix #22582 tracking | 2026-02-22 | (this commit) | [8-make-sure-this-whole-implementation-is-s](./quick/8-make-sure-this-whole-implementation-is-s/) |
 
 ### Blockers/Concerns
 
@@ -160,8 +162,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-22 — Quick task 7: Save sub-agent spawning + config findings to MEMORY.md
-Stopped at: quick-7 complete. MEMORY.md has all 4 new Critical sections. Sub-agent fixes documented.
+Last session: 2026-02-22 — Debugged sub-agent isSecureWebSocketUrl failure. Root cause: gateway.mode must be "remote" to activate remote.url lookup in sessions_spawn. Tailscale doesn't help (non-loopback IPs fail check). Applied TEMP patch (mode=remote + remote.token + --allow-unconfigured) and committed to git. Upstream fix tracked: CHANGELOG #22582 (not yet shipped as of 2026.2.21-2).
+Stopped at: bootstrap.sh committed. Sub-agents reaching gateway in live container (device pairing partially resolved).
 Resume at: Execute 06-02-PLAN.md (AGENTS.md + memory/patterns/).
 Resume file: None
 
