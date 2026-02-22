@@ -10,6 +10,8 @@ fi
 
 OPENCLAW_STATE="${OPENCLAW_STATE_DIR:-/data/.openclaw}"
 CONFIG_FILE="$OPENCLAW_STATE/openclaw.json"
+# Unlock config for patching (re-locked read-only at end of patch section)
+chmod 644 "$CONFIG_FILE" 2>/dev/null || true
 WORKSPACE_DIR="${OPENCLAW_WORKSPACE:-/data/openclaw-workspace}"
 
 mkdir -p "$OPENCLAW_STATE" "$WORKSPACE_DIR"
@@ -284,7 +286,20 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     ]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Updated model fallbacks (sonnet → gemini-3-flash-preview → auto)"
   fi
+  # Patch: gateway.remote.url — sub-agents use loopback to bypass plaintext LAN security check
+  REMOTE_URL=$(jq -r '.gateway.remote.url // empty' "$CONFIG_FILE" 2>/dev/null)
+  if [ -z "$REMOTE_URL" ] || [ "$REMOTE_URL" != "ws://127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789}" ]; then
+    jq ".gateway.remote = {\"url\": \"ws://127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789}\"}" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Set gateway.remote.url=ws://127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789} (sub-agent loopback)"
+  fi
+  # Patch: disable gateway/restart tools so agent cannot modify gateway config or trigger restarts
+  jq '.commands.gateway = false | .commands.restart = false' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+  echo "[config] Disabled commands.gateway and commands.restart"
 fi
+
+# Lock config read-only so agent cannot overwrite it via bash between boots
+chmod 444 "$CONFIG_FILE"
+echo "[config] Locked openclaw.json read-only"
 
 # ----------------------------
 # Export state
