@@ -127,7 +127,7 @@ Recent decisions affecting current work:
 | 4 | Research Claude Max vs Anthropic API compatibility for OpenClaw | 2026-02-21 | `a167a44` | [4-i-want-to-research-using-the-anthropic-c](./quick/4-i-want-to-research-using-the-anthropic-c/) |
 | 5 | Research QMD memory system: capabilities, live deployment status, comparison vs NOVA + built-in | 2026-02-21 | `512600f` | [5-research-how-to-make-openclaw-qmd-memory](./quick/5-research-how-to-make-openclaw-qmd-memory/) |
 | 6 | Execute Phase 6 Plan 06-01: memorySearch + subagents jq patches, NOVA cron disabled | 2026-02-22 | `83491f3` | [6-what-now](./quick/6-what-now/) |
-| 7 | Save Phase 6 sub-agent spawning and config findings to persistent project memory | 2026-02-22 | (docs only) | [7-save-to-memory](./quick/7-save-to-memory/) |
+| 7 | save to memory: sub-agent spawning fix, useAccessGroups, config lock pattern | 2026-02-22 | `2faae71` | [7-save-to-memory](./quick/7-save-to-memory/) |
 
 ### Blockers/Concerns
 
