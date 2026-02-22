@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 Phase: 6 of 6 (Agent Orchestration -- IN PROGRESS)
 Plan: 06-01 created, 06-02 created, 06-03 created (not yet executed)
 Status: Phase 6 plans written and revised. Pending execution.
-Last activity: 2026-02-21 - Completed quick task 4: Research Claude Max vs Anthropic API compatibility for OpenClaw
+Last activity: 2026-02-22 - Completed quick task 6: Execute Phase 6 Plan 06-01 (memorySearch + subagents config patches)
 
 Progress: [████████████████████] 83% (5/6 phases complete, 6th in progress)
 
@@ -113,7 +113,8 @@ Recent decisions affecting current work:
 - Verify NOVA memory catch-up cron is running under gosu/openclaw user
 - Install mcpporter skill: `npx playbooks add skill openclaw/skills --skill mcporter`
 - Upgrade OpenClaw to 2026.2.19 (security fix: path containment for plugins/hooks)
-- Execute Phase 6 plans (06-01, 06-02, 06-03)
+- ~~Execute Phase 6 plan 06-01~~ (DONE: memorySearch + subagents patches committed, deploy in progress)
+- Execute Phase 6 plans (06-02, 06-03) — 06-02 now unblocked
 - Push committed changes: SOUL.md (ACIP), BOOTSTRAP.md (persistence rules)
 
 ### Quick Tasks Completed
@@ -125,6 +126,7 @@ Recent decisions affecting current work:
 | 3 | Gosu entrypoint + OpenClaw 2026.2.15 upgrade + NOVA permission/config fixes | 2026-02-16 | `b730f37` | N/A (direct commits) |
 | 4 | Research Claude Max vs Anthropic API compatibility for OpenClaw | 2026-02-21 | `a167a44` | [4-i-want-to-research-using-the-anthropic-c](./quick/4-i-want-to-research-using-the-anthropic-c/) |
 | 5 | Research QMD memory system: capabilities, live deployment status, comparison vs NOVA + built-in | 2026-02-21 | `512600f` | [5-research-how-to-make-openclaw-qmd-memory](./quick/5-research-how-to-make-openclaw-qmd-memory/) |
+| 6 | Execute Phase 6 Plan 06-01: memorySearch + subagents jq patches, NOVA cron disabled | 2026-02-22 | `83491f3` | [6-what-now](./quick/6-what-now/) |
 
 ### Blockers/Concerns
 
@@ -157,9 +159,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-21 — Quick task 5: QMD vs NOVA memory research
-Stopped at: quick-5 complete (5-RESEARCH.md + 5-SUMMARY.md). Phase 6 plans still pending execution.
-Resume at: `/gsd:execute-phase 06-agent-orchestration` OR install mcpporter skill OR upgrade OpenClaw to 2026.2.19
+Last session: 2026-02-22 — Quick task 6: Execute Phase 6 Plan 06-01
+Stopped at: quick-6 complete. 06-01-SUMMARY.md created. 83491f3 pushed to main. Deploy in progress — server-side verification pending.
+Resume at: After deploy completes, verify memorySearch/subagents config via SSH. Then execute 06-02-PLAN.md.
 Resume file: None
 
 ### Key Details
