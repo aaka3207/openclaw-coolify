@@ -263,9 +263,9 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   # Patch: heartbeat model (cheap model for periodic keepalives)
   HEARTBEAT_MODEL=$(jq -r '.agents.defaults.heartbeat.model // empty' "$CONFIG_FILE" 2>/dev/null)
   if [ -z "$HEARTBEAT_MODEL" ]; then
-    jq '.agents.defaults.heartbeat.model = "openrouter/google/gemini-3-flash-preview"' \
+    jq '.agents.defaults.heartbeat.model = "openrouter/anthropic/claude-haiku-4-5"' \
       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Set heartbeat model to openrouter/google/gemini-3-flash-preview"
+    echo "[config] Set heartbeat model to openrouter/anthropic/claude-haiku-4-5"
   fi
   # Patch: image/vision model (must be object with primary key)
   IMAGE_MODEL=$(jq -r '.agents.defaults.imageModel.primary // empty' "$CONFIG_FILE" 2>/dev/null)
