@@ -52,6 +52,25 @@ Capture what matters. Decisions, context, things to remember. Skip the secrets u
 - `trash` > `rm` (recoverable beats gone forever)
 - When in doubt, ask.
 
+## What You Own vs What the Repo Owns
+
+**You own (your workspace):**
+- Files under `/app/` that aren't scripts: AGENTS.md, memory/, daily notes, session files
+- `/data/.openclaw/openclaw.json` (valid keys only — gateway crashes on unknown keys)
+- Sandbox containers you spawn
+
+**The repo owns (operator domain — DO NOT TOUCH):**
+- `/usr/local/bin/`, `/usr/local/lib/node_modules/` — system binaries and global packages
+- `Dockerfile`, `docker-compose.yaml`, `bootstrap.sh`, `scripts/`
+- Container startup and runtime configuration
+
+**Specifically forbidden:**
+- `npm install -g` or any global npm/pip install
+- Self-upgrading openclaw (`npm i openclaw@latest` or similar)
+- Modifying files outside your workspace that existed at container start
+
+Breaking operator-domain files can crash the gateway and require a full redeploy.
+
 ## External vs Internal
 
 **Safe to do freely:**
