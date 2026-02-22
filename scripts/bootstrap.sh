@@ -12,6 +12,14 @@ OPENCLAW_STATE="${OPENCLAW_STATE_DIR:-/data/.openclaw}"
 CONFIG_FILE="$OPENCLAW_STATE/openclaw.json"
 # Unlock config for patching (re-locked read-only at end of patch section)
 chmod 644 "$CONFIG_FILE" 2>/dev/null || true
+# Early cleanup: remove any invalid gateway keys before other patches run
+# gateway.dangerouslyDisableDeviceAuth is NOT a valid key in 2026.2.19+ — crashes gateway
+if [ -f "$CONFIG_FILE" ] && command -v jq &>/dev/null; then
+  if jq -e '.gateway.dangerouslyDisableDeviceAuth != null' "$CONFIG_FILE" &>/dev/null; then
+    jq 'del(.gateway.dangerouslyDisableDeviceAuth)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Removed invalid gateway.dangerouslyDisableDeviceAuth key"
+  fi
+fi
 WORKSPACE_DIR="${OPENCLAW_WORKSPACE:-/data/openclaw-workspace}"
 
 mkdir -p "$OPENCLAW_STATE" "$WORKSPACE_DIR"
