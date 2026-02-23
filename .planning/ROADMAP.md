@@ -138,12 +138,18 @@ Plans:
 **Depends on**: Phase 6 (Agent Orchestration)
 **Plans**: 5 plans
 
+Wave structure:
+- Wave 1: 08-01 (foundation — must complete before all others)
+- Wave 2: 08-02, 08-03 (parallel — Claude Code install + n8n error workflow, both depend on 08-01)
+- Wave 3: 08-04 (Director onboarding — depends on 08-01, 08-02, 08-03)
+- Wave 4: 08-05 (end-to-end verification — depends on all prior plans)
+
 Plans:
-- [ ] 08-01-PLAN.md -- Bootstrap Automation Supervisor (only hardcoded Director) + add-director.sh + COMPANY_MEMORY.md extraPaths + weekly cron
-- [ ] 08-02-PLAN.md -- Install Claude Code CLI on server + configure auth for headless invocation (human checkpoint)
-- [ ] 08-03-PLAN.md -- Create n8n Global Error Trigger workflow routing to Automation Supervisor
-- [ ] 08-04-PLAN.md -- Onboard Budget CFO and Business Researcher Directors via add-director.sh (human-guided)
-- [ ] 08-05-PLAN.md -- End-to-end verification: deploy, test Director routing, validate infrastructure
+- [ ] 08-01-PLAN.md — Bootstrap Automation Supervisor + add-director.sh + COMPANY_MEMORY.md extraPaths + weekly cron + ANTHROPIC_API_KEY credential write
+- [ ] 08-02-PLAN.md — Install Claude Code CLI on server + configure headless auth (human checkpoint)
+- [ ] 08-03-PLAN.md — Create n8n Global Error Trigger workflow routing to Automation Supervisor
+- [ ] 08-04-PLAN.md — Onboard Budget CFO and Business Researcher via add-director.sh (human-guided)
+- [ ] 08-05-PLAN.md — End-to-end verification: 4-agent count, self-healing loop, Claude Code, Director-to-Director comm
 
 ## Progress
 
