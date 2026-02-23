@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** A secure, self-hosted AI agent that runs on my home server with proper secrets management and persistent memory — accessible only from my LAN.
-**Current focus:** Phase 7: Tailscale Integration -- PLANNED (requires user Tailscale setup)
+**Current focus:** Phase 7: Tailscale Integration -- 07-01 COMPLETE, 07-02 pending (deploy verification)
 
 ## Current Position
 
-Phase: 7 of 7 (Tailscale Integration -- PLANNED)
-Plan: 07-01 and 07-02 created and verified
-Status: Phase 6 complete. Phase 7 plans ready — awaiting user Tailscale account setup before execution.
-Last activity: 2026-02-22 - Completed quick task 11: verify Phase 8 plans against architecture docs. 2 HIGH contradictions found (QMD ref in SOUL.md, cron.jobs key validity). Fix before executing Phase 8.
+Phase: 7 of 7 (Tailscale Integration -- IN PROGRESS)
+Plan: 07-01 COMPLETE, 07-02 pending
+Status: 07-01 executed: Dockerfile + bootstrap.sh + docker-compose.yaml + connect-mac-node.sh updated. Ready for user Tailscale setup + deploy (07-02).
+Last activity: 2026-02-23 - Executed 07-01: tailscale-install Dockerfile stage, tailscaled startup in bootstrap.sh, temp patches removed, connect-mac-node.sh updated for MagicDNS URL.
 
-Progress: [██████████████████░░] 86% (6/7 phases complete)
+Progress: [██████████████████░░] 86% (6/7 phases complete — 07-02 deploy verification pending)
 
 ## Performance Metrics
 
@@ -34,6 +34,7 @@ Progress: [██████████████████░░] 86% (6/
 | 05-n8n-integration | 1 | ~8 min | ~8 min |
 
 *Updated after each plan completion*
+| Phase 07-tailscale-integration P01 | 178 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,8 @@ Recent decisions affecting current work:
 - HOOKS_TOKEN separate from gateway TOKEN for independent rotation via BWS (05-01, completed)
 - N8N_API_KEY follows credential isolation pattern: file + unset (05-01, completed)
 - jq patch block enables hooks on existing configs without config deletion (05-01, completed)
+- [Phase 07-tailscale-integration]: Tailscale userspace networking (no NET_ADMIN/tun device): binary copy from official image, state persisted to /data/tailscale/
+- [Phase 07-tailscale-integration]: gateway.bind=loopback + tailscale.mode=serve replaces TEMP mode=remote patches (CHANGELOG #22582 workaround removed)
 
 ### Lessons Learned (Phase 1)
 
@@ -165,9 +168,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-22 — Phase 6 complete. 06-02 executed: AGENTS.md + memory/patterns/ seeded to workspace. Phase 7 (Tailscale) fully planned: 07-01 (Dockerfile + bootstrap) + 07-02 (deploy verification). Plan checker ran; 3 blockers fixed. Also: symlink self-healing guard added to bootstrap.sh; ownership boundaries added to AGENTS.md + SOUL.md.
-Stopped at: Phase 7 plans finalized.
-Resume at: Execute Phase 7 — user must first complete Tailscale pre-setup (see 07-02-PLAN.md Task 1).
+Last session: 2026-02-23 — Executed 07-01: tailscale v1.94.2 binaries baked into Dockerfile via binary copy from official image (tailscale-install stage). tailscaled starts with userspace networking in bootstrap.sh before openclaw gateway. Config patched to bind=loopback + tailscale.mode=serve. All 4 TEMP sub-agent patches removed (mode=remote, remote.url, remote.token, --allow-unconfigured). connect-mac-node.sh updated for Tailscale MagicDNS URL with runtime flag detection.
+Stopped at: 07-01 complete (3 commits: dd7440c, 878b3d7, 5078943).
+Resume at: Execute Phase 7 plan 07-02 — user must first complete Tailscale pre-setup (see 07-02-PLAN.md Task 1). Deploy to Coolify and verify.
 Resume file: None
 
 ### Key Details
