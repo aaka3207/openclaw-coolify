@@ -6,6 +6,5 @@ node_modules
 dist
 build
 *.log
-docs/
 brain/
 tests/
