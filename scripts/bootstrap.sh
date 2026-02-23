@@ -182,7 +182,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
   "gateway": {
   "port": $OPENCLAW_GATEWAY_PORT,
   "mode": "local",
-    "bind": "lan",
+    "bind": "loopback",
     "controlUi": {
       "enabled": true,
       "allowInsecureAuth": true
@@ -192,7 +192,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
       "192.168.1.0/24"
     ],
     "tailscale": {
-      "mode": "off",
+      "mode": "serve",
       "resetOnExit": false
     },
     "auth": { "mode": "token", "token": "$TOKEN" }
@@ -330,29 +330,26 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     ]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Updated model fallbacks (sonnet → gemini-3-flash-preview → auto)"
   fi
-  # Patch: gateway.remote.url — sub-agents use loopback to bypass plaintext LAN security check
-  REMOTE_URL=$(jq -r '.gateway.remote.url // empty' "$CONFIG_FILE" 2>/dev/null)
-  if [ -z "$REMOTE_URL" ] || [ "$REMOTE_URL" != "ws://127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789}" ]; then
-    jq ".gateway.remote = {\"url\": \"ws://127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789}\"}" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Set gateway.remote.url=ws://127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789} (sub-agent loopback)"
+  # Patch: gateway.bind=loopback + tailscale.mode=serve (Phase 7)
+  # bind=loopback means gateway only listens on 127.0.0.1 — Tailscale Serve proxies HTTPS
+  CURRENT_BIND=$(jq -r '.gateway.bind // empty' "$CONFIG_FILE" 2>/dev/null)
+  if [ "$CURRENT_BIND" != "loopback" ]; then
+    jq '.gateway.bind = "loopback"' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Set gateway.bind=loopback (Tailscale Serve handles external access)"
   fi
-  # TEMP: set gateway.mode=remote so sub-agents resolve via remote.url (loopback)
-  # Without this, mode defaults to "local" and sessions_spawn ignores remote.url entirely.
-  # Remove when CHANGELOG #22582 ships (upstream fix for loopback sub-agent auth).
-  GATEWAY_MODE=$(jq -r '.gateway.mode // empty' "$CONFIG_FILE" 2>/dev/null)
-  if [ "$GATEWAY_MODE" != "remote" ]; then
-    jq '.gateway.mode = "remote"' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Set gateway.mode=remote (TEMP: sub-agent loopback fix)"
+  CURRENT_TS_MODE=$(jq -r '.gateway.tailscale.mode // empty' "$CONFIG_FILE" 2>/dev/null)
+  if [ "$CURRENT_TS_MODE" != "serve" ]; then
+    jq '.gateway.tailscale = {"mode": "serve", "resetOnExit": false}' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Set gateway.tailscale.mode=serve"
   fi
-  # TEMP: set gateway.remote.token so sub-agents can auth when mode=remote
-  # Token must match OPENCLAW_GATEWAY_TOKEN (the value Coolify injects as env var).
-  # Remove when CHANGELOG #22582 ships.
-  if [ -n "${OPENCLAW_GATEWAY_TOKEN:-}" ]; then
-    REMOTE_TOKEN=$(jq -r '.gateway.remote.token // empty' "$CONFIG_FILE" 2>/dev/null)
-    if [ "$REMOTE_TOKEN" != "$OPENCLAW_GATEWAY_TOKEN" ]; then
-      jq --arg tok "$OPENCLAW_GATEWAY_TOKEN" '.gateway.remote.token = $tok' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-      echo "[config] Set gateway.remote.token from OPENCLAW_GATEWAY_TOKEN (TEMP: sub-agent auth)"
-    fi
+  # Cleanup: remove stale temp patches from volume config (Phase 7)
+  if jq -e '.gateway.mode == "remote"' "$CONFIG_FILE" &>/dev/null; then
+    jq '.gateway.mode = "local"' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Reverted gateway.mode from remote to local (temp patch removed)"
+  fi
+  if jq -e '.gateway.remote != null' "$CONFIG_FILE" &>/dev/null; then
+    jq 'del(.gateway.remote)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Removed gateway.remote (temp patch removed)"
   fi
   # Patch: disable useAccessGroups so sub-agents get full operator scope without pairing
   jq '.commands.useAccessGroups = false' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
@@ -594,11 +591,68 @@ echo "To view: cat $ACCESS_FILE"
 echo ""
 echo "Onboarding:"
 echo "  1. View credentials: cat $ACCESS_FILE"
-echo "  2. Approve this machine: openclaw-approve"
-echo "  3. Start onboarding: openclaw onboard"
+echo "  2. Access Control UI: https://${TS_HOSTNAME:-openclaw-server}.[tailnet].ts.net"
+echo "  3. Approve this machine: openclaw-approve"
+echo "  4. Start onboarding: openclaw onboard"
 echo ""
 echo "=================================================================="
-# TEMP: --allow-unconfigured required when gateway.mode=remote without full remote config
-# Remove when CHANGELOG #22582 ships.
+
+# ----------------------------
+# Tailscale Startup (Phase 7)
+# ----------------------------
+# OpenClaw with tailscale.mode=serve requires tailscaled running and authenticated.
+# Uses userspace networking — no NET_ADMIN cap or /dev/net/tun needed.
+# State persisted to /data/tailscale/ (existing volume) to survive restarts.
+if command -v tailscaled >/dev/null 2>&1; then
+  TS_STATE="/data/tailscale"
+  mkdir -p "$TS_STATE"
+  tailscaled --tun=userspace-networking \
+    --statedir="$TS_STATE" \
+    --socket=/var/run/tailscale/tailscaled.sock \
+    >/tmp/tailscaled.log 2>&1 &
+  TAILSCALED_PID=$!
+  echo "[tailscale] Started tailscaled (PID $TAILSCALED_PID, userspace networking)"
+
+  # Wait for socket to be available (up to 10s)
+  for i in $(seq 1 10); do
+    [ -S /var/run/tailscale/tailscaled.sock ] && break
+    sleep 1
+  done
+
+  # Brief pause after socket appears — daemon may not be fully ready yet
+  sleep 1
+
+  # Verify daemon is responsive before proceeding
+  tailscale --socket=/var/run/tailscale/tailscaled.sock status >/dev/null 2>&1 || echo "[tailscale] WARNING: tailscaled socket exists but daemon not yet responsive"
+
+  # Authenticate (idempotent — skips if already logged in from persisted state)
+  if [ -n "${TS_AUTHKEY:-}" ]; then
+    tailscale --socket=/var/run/tailscale/tailscaled.sock up \
+      --auth-key="${TS_AUTHKEY}" \
+      --hostname="${TS_HOSTNAME:-openclaw-server}" \
+      --accept-routes 2>&1 || echo "[tailscale] WARNING: tailscale up failed (may already be authenticated)"
+  fi
+
+  # Wait for tailscale to be connected (up to 30s)
+  TS_READY=false
+  for i in $(seq 1 15); do
+    if tailscale --socket=/var/run/tailscale/tailscaled.sock status --json 2>/dev/null \
+        | jq -e '.BackendState == "Running"' >/dev/null 2>&1; then
+      TS_IP=$(tailscale --socket=/var/run/tailscale/tailscaled.sock ip -4 2>/dev/null || true)
+      TS_READY=true
+      echo "[tailscale] Connected to tailnet (IP: ${TS_IP:-unknown})"
+      break
+    fi
+    sleep 2
+  done
+  if [ "$TS_READY" = "false" ]; then
+    echo "[tailscale] WARNING: tailscale not connected after 30s — gateway may fail with tailscale.mode=serve"
+  fi
+
+  # Log tailscale serve status for diagnostics (helps debug if openclaw's serve call fails later)
+  echo "[tailscale] Serve status at startup:"
+  tailscale --socket=/var/run/tailscale/tailscaled.sock serve status 2>&1 || echo "[tailscale] WARNING: tailscale serve status check failed — userspace-networking may require SOCKS5 proxy config for serve. Check /tmp/tailscaled.log"
+fi
+
 hash -r 2>/dev/null || true
-exec openclaw gateway run --allow-unconfigured
+exec openclaw gateway run
