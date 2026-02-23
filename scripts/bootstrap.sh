@@ -363,12 +363,19 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     }' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Set memorySearch provider=gemini/gemini-embedding-001 (free, hybrid BM25+vector)"
   fi
-  # Patch: allow group:memory tools (memory_search + memory_get) for all agents
-  HAS_MEMORY_GROUP=$(jq -r '.tools.allow // [] | map(select(. == "group:memory")) | length' "$CONFIG_FILE" 2>/dev/null)
-  if [ "$HAS_MEMORY_GROUP" = "0" ]; then
-    jq '.tools.allow = ((.tools.allow // []) + ["group:memory"] | unique)' \
+  # Patch: enable memory_search + memory_get via tools.alsoAllow (additive).
+  # Cannot use tools.allow — openclaw rejects allow+alsoAllow together, and allow with unknown
+  # entries (e.g. group:memory before memorySearch initializes) causes the entire allowlist to be ignored.
+  # Cleanup: remove tools.allow if it only contains group:memory (stale from old patch).
+  if jq -e '.tools.allow == ["group:memory"]' "$CONFIG_FILE" &>/dev/null; then
+    jq 'del(.tools.allow)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Removed stale tools.allow=[group:memory] (replaced by alsoAllow)"
+  fi
+  HAS_MEMORY_ALSO=$(jq -r '.tools.alsoAllow // [] | map(select(. == "group:memory")) | length' "$CONFIG_FILE" 2>/dev/null)
+  if [ "$HAS_MEMORY_ALSO" = "0" ]; then
+    jq '.tools.alsoAllow = ((.tools.alsoAllow // []) + ["group:memory"] | unique)' \
       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Added group:memory to tools.allow (memory_search + memory_get)"
+    echo "[config] Added group:memory to tools.alsoAllow (memory_search + memory_get)"
   fi
   # Patch: set sub-agent model defaults (Haiku via OpenRouter for cost efficiency)
   # Force-update if set to bare anthropic/ prefix (missing openrouter/)
