@@ -65,7 +65,7 @@ services:
       NPM_CONFIG_CACHE: /data/.npm
       BUN_INSTALL: /data/.bun
       # Map OpenClaw vars
-      OPENCLAW_GATEWAY_BIND: lan
+      OPENCLAW_GATEWAY_BIND: loopback
       OPENCLAW_GATEWAY_PORT: ${OPENCLAW_GATEWAY_PORT:-18789}
       # Tell the binary where to look for state/config
       OPENCLAW_STATE_DIR: /data/.openclaw
@@ -112,6 +112,9 @@ services:
       GITHUB_EMAIL: ${GITHUB_EMAIL}
       # Optional
       OPENCLAW_BETA: ${OPENCLAW_BETA:-false}
+      # Tailscale (Phase 7)
+      TS_AUTHKEY: ${TS_AUTHKEY:-}
+      TS_HOSTNAME: ${TS_HOSTNAME:-openclaw-server}
 
     volumes:
       - openclaw-data:/data
@@ -120,7 +123,7 @@ services:
       # - /var/run/docker.sock:/var/run/docker.sock
 
     ports:
-      - "18789:18789"
+      - "18789:18789"  # Vestigial with bind=loopback — Tailscale Serve handles access
 
     depends_on:
       - docker-proxy

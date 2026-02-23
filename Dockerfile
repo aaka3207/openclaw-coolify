@@ -151,8 +151,17 @@ RUN --mount=type=cache,target=/data/.npm \
     exit 1; \
     fi
 
-# Stage 4: Final application stage (changes on every git push)
-FROM openclaw-install AS final
+# Stage 3.5: Tailscale binaries (cached — only rebuilds when version changes)
+# Binary copy pattern from tailscale.com/kb/1107/heroku — no APT repo needed
+FROM openclaw-install AS tailscale-install
+
+ARG TAILSCALE_VERSION=1.94.2
+COPY --from=docker.io/tailscale/tailscale:v1.94.2 /usr/local/bin/tailscaled /usr/local/bin/tailscaled
+COPY --from=docker.io/tailscale/tailscale:v1.94.2 /usr/local/bin/tailscale /usr/local/bin/tailscale
+RUN mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale
+
+# Stage 5: Final application stage (changes on every git push)
+FROM tailscale-install AS final
 
 WORKDIR /app
 
