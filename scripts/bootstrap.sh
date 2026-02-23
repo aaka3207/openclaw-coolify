@@ -437,6 +437,13 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   # Patch: remove invalid commands keys if agent accidentally added them
   jq 'del(.commands.gateway) | del(.commands.restart)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 
+  # Patch: update automation-supervisor model if still on old sonnet value
+  SUPERVISOR_MODEL=$(jq -r '.agents.list[] | select(.id == "automation-supervisor") | .model.primary // empty' "$CONFIG_FILE" 2>/dev/null)
+  if [ "$SUPERVISOR_MODEL" = "openrouter/anthropic/claude-sonnet-4-5" ]; then
+    jq '(.agents.list[] | select(.id == "automation-supervisor") | .model.primary) = "openrouter/google/gemini-3.1-pro-preview"' \
+      "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Updated automation-supervisor model to gemini-3.1-pro-preview"
+  fi
   # Patch: add automation-supervisor Director to agents.list (idempotent)
   # Per ARCHITECTURE_REFINEMENT.md Section 10 — only Supervisor is hardcoded in bootstrap.sh
   HAS_SUPERVISOR=$(jq -r '.agents.list[] | select(.id == "automation-supervisor") | .id' "$CONFIG_FILE" 2>/dev/null)
@@ -448,7 +455,7 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
          "workspace": $ws,
          "default": false,
          "model": {
-           "primary": "openrouter/anthropic/claude-sonnet-4-5",
+           "primary": "openrouter/google/gemini-3.1-pro-preview",
            "fallbacks": ["openrouter/google/gemini-3-flash-preview", "openrouter/auto"]
          },
          "heartbeat": {
