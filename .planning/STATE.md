@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 
 ## Current Position
 
-Phase: 7 COMPLETE — Phase 8 next
-Plan: 07-02 COMPLETE
-Status: Phase 7 fully verified. Tailscale Serve active at https://openclaw-server.tailad0efc.ts.net/. All temp patches removed. Phase 8 plans exist and are ready to execute.
-Last activity: 2026-02-23 - Phase 7 complete. Control UI accessible via Tailscale HTTPS. Sub-agents working. n8n LAN-only confirmed. Bootstrap.sh serve pre-config fix committed (1f92992).
+Phase: 8 IN PROGRESS
+Plan: 08-01 COMPLETE — 08-02 next
+Status: 08-01 complete. automation-supervisor registered in agents.list, add-director.sh lifecycle script created, COMPANY_MEMORY.md indexed via extraPaths, n8n-project worker scaffold created. Deploy to verify runtime behavior.
+Last activity: 2026-02-23 - 08-01 complete. 4 tasks, 9 files, 4 commits. Open questions: file-based cron verification, SIGHUP reload test, MEMORY.md in hook sessions.
 
-Progress: [████████████████████] 100% Phase 7 complete — ready for Phase 8
+Progress: [████████████████████] Phase 8 Wave 1 complete — 08-02 next
 
 ## Performance Metrics
 
@@ -35,6 +35,7 @@ Progress: [████████████████████] 100% Ph
 
 *Updated after each plan completion*
 | Phase 07-tailscale-integration P01 | 178 | 3 tasks | 4 files |
+| Phase 08-director-workforce P01 | ~25 min | 4 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,10 @@ Recent decisions affecting current work:
 - jq patch block enables hooks on existing configs without config deletion (05-01, completed)
 - [Phase 07-tailscale-integration]: Tailscale userspace networking (no NET_ADMIN/tun device): binary copy from official image, state persisted to /data/tailscale/
 - [Phase 07-tailscale-integration]: gateway.bind=loopback + tailscale.mode=serve replaces TEMP mode=remote patches (CHANGELOG #22582 workaround removed)
+- [Phase 08-01]: automation-supervisor is the only Director hardcoded in bootstrap.sh; all others use add-director.sh lifecycle script
+- [Phase 08-01]: ANTHROPIC_API_KEY NOT in BWS loop — Claude Code uses OAuth subscription auth (claude auth login), not API key
+- [Phase 08-01]: COMPANY_MEMORY.md indexed via agents.defaults.memorySearch.extraPaths — single patch makes it searchable by all agents; QMD not used
+- [Phase 08-01]: File-based cron (workspace/cron/) behavior unverified — OPEN QUESTION at deploy time
 
 ### Lessons Learned (Phase 1)
 
@@ -168,10 +173,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-23 — Started 07-02 execution. Plan is 2x checkpoint:human-verify tasks (no automatable work). Hit Task 1 checkpoint: user must complete Tailscale account setup + add TS_AUTHKEY to Coolify env + push to deploy. After deploy, Task 2 verification covers 8 steps (tailscale status, Control UI HTTPS access, sub-agent health, gateway.remote cleanup, n8n isolation, restart persistence, connect-mac-node.sh update).
-Stopped at: 07-02 Task 1 checkpoint (pre-deploy Tailscale setup required).
-Resume at: After user signals "deployed" — continue with Task 2 post-deploy verification checklist.
-Resume file: None
+Last session: 2026-02-23 — Executed 08-01 (Director Workforce Foundation). 4 tasks complete: bootstrap.sh patched (automation-supervisor + extraPaths), add-director.sh created, SOUL.md/HEARTBEAT.md/COMPANY_MEMORY.md/weekly-cron created, n8n-project scaffold created. 4 commits, 9 files. Open questions documented in 08-01-SUMMARY.md.
+Stopped at: Completed 08-01-PLAN.md
+Resume at: 08-02 (self-healing n8n error trigger workflow)
 
 ### Key Details
 - Container: `openclaw-ukwkggw4o8go0wgg804oc4oo-185052814424`
