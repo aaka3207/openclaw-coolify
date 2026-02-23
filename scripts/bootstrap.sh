@@ -270,6 +270,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
       "allowInsecureAuth": true
     },
     "trustedProxies": [
+      "100.64.0.0/10",
       "172.16.0.0/12",
       "192.168.1.0/24"
     ],
@@ -434,6 +435,13 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     ]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Updated model fallbacks (sonnet → gemini-3-flash-preview → auto)"
   fi
+  # Patch: ensure Tailscale subnet 100.64.0.0/10 is in trustedProxies (Phase 7 — for MacBook access)
+  HAS_TS_PROXY=$(jq -r '.gateway.trustedProxies // [] | index("100.64.0.0/10") // empty' "$CONFIG_FILE" 2>/dev/null)
+  if [ -z "$HAS_TS_PROXY" ]; then
+    jq '.gateway.trustedProxies = ((.gateway.trustedProxies // []) + ["100.64.0.0/10"] | unique)' \
+      "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Added 100.64.0.0/10 to gateway.trustedProxies (Tailscale subnet)"
+  fi
   # Patch: gateway.bind=loopback + tailscale.mode=serve (Phase 7)
   # bind=loopback means gateway only listens on 127.0.0.1 — Tailscale Serve proxies HTTPS
   CURRENT_BIND=$(jq -r '.gateway.bind // empty' "$CONFIG_FILE" 2>/dev/null)
@@ -464,12 +472,13 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   # Patch: remove invalid commands keys if agent accidentally added them
   jq 'del(.commands.gateway) | del(.commands.restart)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 
-  # Patch: update automation-supervisor model if still on old sonnet value
+  # Patch: update automation-supervisor model to minimax-m2.5 (best cost/quality for supervisor role)
+  # Catches old values: claude-sonnet-4-5 (original), gemini-3.1-pro-preview (had stopReason=error)
   SUPERVISOR_MODEL=$(jq -r '.agents.list[] | select(.id == "automation-supervisor") | .model.primary // empty' "$CONFIG_FILE" 2>/dev/null)
-  if [ "$SUPERVISOR_MODEL" = "openrouter/anthropic/claude-sonnet-4-5" ]; then
-    jq '(.agents.list[] | select(.id == "automation-supervisor") | .model.primary) = "openrouter/google/gemini-3.1-pro-preview"' \
+  if [ "$SUPERVISOR_MODEL" = "openrouter/anthropic/claude-sonnet-4-5" ] || [ "$SUPERVISOR_MODEL" = "openrouter/google/gemini-3.1-pro-preview" ]; then
+    jq '(.agents.list[] | select(.id == "automation-supervisor") | .model.primary) = "openrouter/minimax/minimax-m2.5"' \
       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Updated automation-supervisor model to gemini-3.1-pro-preview"
+    echo "[config] Updated automation-supervisor model to minimax-m2.5"
   fi
   # Patch: add automation-supervisor Director to agents.list (idempotent)
   # Per ARCHITECTURE_REFINEMENT.md Section 10 — only Supervisor is hardcoded in bootstrap.sh
@@ -482,7 +491,7 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
          "workspace": $ws,
          "default": false,
          "model": {
-           "primary": "openrouter/google/gemini-3.1-pro-preview",
+           "primary": "openrouter/minimax/minimax-m2.5",
            "fallbacks": ["openrouter/google/gemini-3-flash-preview", "openrouter/auto"]
          },
          "heartbeat": {
@@ -533,6 +542,30 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
        '.agents.defaults.memorySearch.extraPaths = ((.agents.defaults.memorySearch.extraPaths // []) + [$p] | unique)' \
        "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Added COMPANY_MEMORY.md to agents.defaults.memorySearch.extraPaths"
+  fi
+  # Patch: Matrix channel config (Phase 2) — uses env vars from Coolify
+  # Only patch if MATRIX_HOMESERVER and MATRIX_PASSWORD are set and channel not yet configured
+  if [ -n "${MATRIX_HOMESERVER:-}" ] && [ -n "${MATRIX_PASSWORD:-}" ]; then
+    MATRIX_ENABLED=$(jq -r '.channels.matrix.enabled // empty' "$CONFIG_FILE" 2>/dev/null)
+    if [ "$MATRIX_ENABLED" != "true" ]; then
+      jq --arg hs "${MATRIX_HOMESERVER}" \
+         --arg uid "@${MATRIX_USER_ID:-bot}:matrix.aakashe.org" \
+         --arg pw "${MATRIX_PASSWORD}" \
+         '.channels = (.channels // {}) |
+          .channels.matrix = {
+            "enabled": true,
+            "homeserver": $hs,
+            "userId": $uid,
+            "password": $pw,
+            "groupPolicy": "disabled",
+            "dm": {"policy": "pairing"},
+            "encryption": true,
+            "markdown": {"tables": "bullets"},
+            "chunkMode": "newline"
+          }' \
+         "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+      echo "[config] Configured channels.matrix (homeserver=${MATRIX_HOMESERVER}, userId=@${MATRIX_USER_ID:-bot}:matrix.aakashe.org)"
+    fi
   fi
 fi
 
