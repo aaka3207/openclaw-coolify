@@ -436,7 +436,7 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
          "workspace": $ws,
          "default": false,
          "model": {
-           "primary": "openrouter/anthropic/claude-sonnet-4-6",
+           "primary": "openrouter/anthropic/claude-sonnet-4-5",
            "fallbacks": ["openrouter/google/gemini-3-flash-preview", "openrouter/auto"]
          },
          "heartbeat": {
