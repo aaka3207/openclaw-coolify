@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** A secure, self-hosted AI agent that runs on my home server with proper secrets management and persistent memory — accessible only from my LAN.
-**Current focus:** Phase 7: Tailscale Integration -- 07-02 PAUSED at checkpoint:human-verify (Task 1: Tailscale pre-setup + deploy)
+**Current focus:** Phase 8: The Organization — Director Workforce (next)
 
 ## Current Position
 
-Phase: 7 of 7 (Tailscale Integration -- IN PROGRESS)
-Plan: 07-02 IN PROGRESS (paused at checkpoint:human-verify Task 1)
-Status: 07-02 started — plan is entirely human-verify checkpoints. Task 1 checkpoint reached: user must complete Tailscale account setup, add TS_AUTHKEY to Coolify env, and push/deploy. Task 2 is post-deploy verification (8-step checklist).
-Last activity: 2026-02-23 - Started 07-02 execution. Hit checkpoint immediately (Task 1: pre-deploy Tailscale setup). Both tasks are human-verify — no automatable work in this plan.
+Phase: 7 COMPLETE — Phase 8 next
+Plan: 07-02 COMPLETE
+Status: Phase 7 fully verified. Tailscale Serve active at https://openclaw-server.tailad0efc.ts.net/. All temp patches removed. Phase 8 plans exist and are ready to execute.
+Last activity: 2026-02-23 - Phase 7 complete. Control UI accessible via Tailscale HTTPS. Sub-agents working. n8n LAN-only confirmed. Bootstrap.sh serve pre-config fix committed (1f92992).
 
-Progress: [██████████████████░░] 86% (6/7 phases complete — 07-02 deploy verification pending)
+Progress: [████████████████████] 100% Phase 7 complete — ready for Phase 8
 
 ## Performance Metrics
 
