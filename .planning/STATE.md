@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 Phase: 7 of 7 (Tailscale Integration -- PLANNED)
 Plan: 07-01 and 07-02 created and verified
 Status: Phase 6 complete. Phase 7 plans ready — awaiting user Tailscale account setup before execution.
-Last activity: 2026-02-22 - Phase 6 complete (06-01 + 06-02 done). Phase 7 planned (07-01 + 07-02).
+Last activity: 2026-02-22 - Completed quick task 11: verify Phase 8 plans against architecture docs. 2 HIGH contradictions found (QMD ref in SOUL.md, cron.jobs key validity). Fix before executing Phase 8.
 
 Progress: [██████████████████░░] 86% (6/7 phases complete)
 
@@ -132,6 +132,7 @@ Recent decisions affecting current work:
 | 8 | Save sub-agent mode=remote patch, isSecureWebSocketUrl findings, upstream fix #22582 tracking | 2026-02-22 | `a108b7d` | [8-make-sure-this-whole-implementation-is-s](./quick/8-make-sure-this-whole-implementation-is-s/) |
 | 9 | Workspace symlink fix + sub-agent announce-back (dangerouslyDisableDeviceAuth TEMP) + QMD path | 2026-02-22 | `c35dbe2` | [9-fix-workspace-symlink-sub-agent-announce](./quick/9-fix-workspace-symlink-sub-agent-announce/) |
 | 10 | Audit: file path fixes from quick-9 + 06-02-PLAN.md vs bootstrap.sh reality — gap analysis | 2026-02-22 | `d561835` | [10-did-we-follow-the-plan-on-file-path-fixe](./quick/10-did-we-follow-the-plan-on-file-path-fixe/) |
+| 11 | Verify Phase 8 plans against ARCHITECTURE_PLAN.md + ARCHITECTURE_REFINEMENT.md | 2026-02-22 | `9796fca` | [11-verify-against-the-two-primary-architect](./quick/11-verify-against-the-two-primary-architect/) |
 
 ### Blockers/Concerns
 
