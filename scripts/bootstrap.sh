@@ -444,6 +444,13 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   # Patch: remove invalid commands keys if agent accidentally added them
   jq 'del(.commands.gateway) | del(.commands.restart)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 
+  # Patch: enable group:memory for dynamically spawned sub-agents via tools.subagents.tools.allow
+  HAS_SUBAGENT_MEMORY=$(jq -r '.tools.subagents.tools.allow // [] | map(select(. == "group:memory")) | length' "$CONFIG_FILE" 2>/dev/null)
+  if [ "${HAS_SUBAGENT_MEMORY:-0}" = "0" ]; then
+    jq '.tools.subagents.tools.allow = ((.tools.subagents.tools.allow // []) + ["group:memory"] | unique)' \
+      "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Added group:memory to tools.subagents.tools.allow"
+  fi
   # Patch: ensure all named agents have tools.alsoAllow=[group:memory]
   # Global tools.alsoAllow does not propagate to agents.list entries — must be set per-agent.
   for agent_id in main automation-supervisor; do
