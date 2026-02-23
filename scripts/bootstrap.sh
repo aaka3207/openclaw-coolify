@@ -649,9 +649,20 @@ if command -v tailscaled >/dev/null 2>&1; then
     echo "[tailscale] WARNING: tailscale not connected after 30s — gateway may fail with tailscale.mode=serve"
   fi
 
-  # Log tailscale serve status for diagnostics (helps debug if openclaw's serve call fails later)
+  # Pre-configure tailscale serve before openclaw starts.
+  # openclaw calls `tailscale serve --bg --yes 18789` internally when tailscale.mode=serve,
+  # but `--yes` is not valid in tailscale v1.94.2. Pre-configuring here ensures serve is active
+  # even if openclaw's internal call fails. Serve config persists in /data/tailscale/ state.
+  if [ "$TS_READY" = "true" ]; then
+    GATEWAY_PORT="${OPENCLAW_GATEWAY_PORT:-18789}"
+    tailscale --socket=/var/run/tailscale/tailscaled.sock serve --bg "$GATEWAY_PORT" >/dev/null 2>&1 \
+      && echo "[tailscale] Serve configured: https://${TS_HOSTNAME:-openclaw-server}.[tailnet].ts.net -> :${GATEWAY_PORT}" \
+      || echo "[tailscale] WARNING: tailscale serve pre-config failed (Serve may need enabling in Tailscale admin console)"
+  fi
+
+  # Log tailscale serve status for diagnostics
   echo "[tailscale] Serve status at startup:"
-  tailscale --socket=/var/run/tailscale/tailscaled.sock serve status 2>&1 || echo "[tailscale] WARNING: tailscale serve status check failed — userspace-networking may require SOCKS5 proxy config for serve. Check /tmp/tailscaled.log"
+  tailscale --socket=/var/run/tailscale/tailscaled.sock serve status 2>&1 || true
 fi
 
 hash -r 2>/dev/null || true
