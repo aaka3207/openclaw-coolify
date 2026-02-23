@@ -358,6 +358,13 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     }' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Set memorySearch provider=gemini/gemini-embedding-001 (free, hybrid BM25+vector)"
   fi
+  # Patch: allow memory_search and memory_get tools for all agents (required for memorySearch to be callable)
+  HAS_MEMORY_TOOLS=$(jq -r '.agents.defaults.tools.allow // [] | map(select(. == "memory_search")) | length' "$CONFIG_FILE" 2>/dev/null)
+  if [ "$HAS_MEMORY_TOOLS" = "0" ]; then
+    jq '.agents.defaults.tools.allow = ((.agents.defaults.tools.allow // []) + ["memory_search", "memory_get"] | unique)' \
+      "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Added memory_search + memory_get to agents.defaults.tools.allow"
+  fi
   # Patch: set sub-agent model defaults (Haiku via OpenRouter for cost efficiency)
   # Force-update if set to bare anthropic/ prefix (missing openrouter/)
   SUBAGENT_MODEL=$(jq -r '.agents.defaults.subagents.model.primary // empty' "$CONFIG_FILE" 2>/dev/null)
