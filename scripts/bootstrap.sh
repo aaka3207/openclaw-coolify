@@ -313,6 +313,13 @@ EOF
   fi  # end heredoc fallback
 fi
 
+# Backup config before patching so we can revert if patches corrupt it
+CONFIG_BACKUP="${CONFIG_FILE}.pre-patch.bak"
+if [ -f "$CONFIG_FILE" ]; then
+  cp "$CONFIG_FILE" "$CONFIG_BACKUP"
+  echo "[config] Backed up openclaw.json before patching"
+fi
+
 # Patch existing config: enable cron if not already set
 if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   CRON_ENABLED=$(jq -r '.cron.enabled // false' "$CONFIG_FILE" 2>/dev/null)
@@ -532,6 +539,22 @@ fi
 # Lock config read-only so agent cannot overwrite it via bash between boots
 chmod 444 "$CONFIG_FILE"
 echo "[config] Locked openclaw.json read-only"
+
+# Verify config is valid after patching — revert to backup if not
+if ! jq empty "$CONFIG_FILE" &>/dev/null; then
+  echo "[config] WARNING: openclaw.json is invalid after patching — reverting to backup"
+  if [ -f "$CONFIG_BACKUP" ] && jq empty "$CONFIG_BACKUP" &>/dev/null; then
+    cp "$CONFIG_BACKUP" "$CONFIG_FILE"
+    chmod 444 "$CONFIG_FILE"
+    echo "[config] Reverted to pre-patch backup"
+  else
+    echo "[config] ERROR: backup also invalid — regenerating from scratch on next restart"
+    rm -f "$CONFIG_FILE"
+  fi
+else
+  echo "[config] Config verified valid after patching"
+  rm -f "$CONFIG_BACKUP"
+fi
 
 # ----------------------------
 # Export state
