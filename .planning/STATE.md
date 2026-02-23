@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 Phase: 8 IN PROGRESS
 Plan: 08-01 COMPLETE — 08-02 next
 Status: 08-01 complete. automation-supervisor registered in agents.list, add-director.sh lifecycle script created, COMPANY_MEMORY.md indexed via extraPaths, n8n-project worker scaffold created. Deploy to verify runtime behavior.
-Last activity: 2026-02-23 - 08-01 complete. 4 tasks, 9 files, 4 commits. Open questions: file-based cron verification, SIGHUP reload test, MEMORY.md in hook sessions.
+Last activity: 2026-02-23 - Completed quick-12: Phase 8 memory gap analysis. 5 gaps found: memory_search dead references in SOUL.md, AGENTS.md excludes Directors from MEMORY.md, add-director.sh missing AGENTS.md + memory/ seeding, no MEMORY.md template for Directors, 08-05 verification missing MEMORY.md check.
 
 Progress: [████████████████████] Phase 8 Wave 1 complete — 08-02 next
 
@@ -141,6 +141,7 @@ Recent decisions affecting current work:
 | 9 | Workspace symlink fix + sub-agent announce-back (dangerouslyDisableDeviceAuth TEMP) + QMD path | 2026-02-22 | `c35dbe2` | [9-fix-workspace-symlink-sub-agent-announce](./quick/9-fix-workspace-symlink-sub-agent-announce/) |
 | 10 | Audit: file path fixes from quick-9 + 06-02-PLAN.md vs bootstrap.sh reality — gap analysis | 2026-02-22 | `d561835` | [10-did-we-follow-the-plan-on-file-path-fixe](./quick/10-did-we-follow-the-plan-on-file-path-fixe/) |
 | 11 | Verify Phase 8 plans against ARCHITECTURE_PLAN.md + ARCHITECTURE_REFINEMENT.md | 2026-02-22 | `9796fca` | [11-verify-against-the-two-primary-architect](./quick/11-verify-against-the-two-primary-architect/) |
+| 12 | Phase 8 memory handling gap analysis — Director memory setup, memory_search availability, AGENTS.md gaps | 2026-02-23 | `a64afa8` | [12-let-s-look-at-our-plan-and-prior-researc](./quick/12-let-s-look-at-our-plan-and-prior-researc/) |
 
 ### Blockers/Concerns
 
