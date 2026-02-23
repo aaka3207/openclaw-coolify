@@ -673,6 +673,16 @@ for var in N8N_API_KEY; do
     fi
 done
 
+# Claude Code CLI: disable auto-updater on server (prevents version drift)
+# Auth is via subscription OAuth stored in /data/.claude/ — no API key needed
+CLAUDE_DIR="/data/.claude"
+mkdir -p "$CLAUDE_DIR"
+CLAUDE_SETTINGS_ENV="$CLAUDE_DIR/settings.env"
+if ! grep -q "DISABLE_AUTOUPDATER" "$CLAUDE_SETTINGS_ENV" 2>/dev/null; then
+  echo "DISABLE_AUTOUPDATER=1" >> "$CLAUDE_SETTINGS_ENV"
+  echo "[claude] Wrote DISABLE_AUTOUPDATER=1 to $CLAUDE_SETTINGS_ENV"
+fi
+
 # ----------------------------
 # NOVA Memory Installation
 # ----------------------------
