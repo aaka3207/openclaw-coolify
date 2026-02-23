@@ -293,7 +293,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
       }
     },
     "list": [
-      { "id": "main","default": true, "name": "default",  "workspace": "${OPENCLAW_WORKSPACE:-/data/openclaw-workspace}"}
+      { "id": "main","default": true, "name": "default",  "workspace": "${OPENCLAW_WORKSPACE:-/data/openclaw-workspace}", "tools": {"alsoAllow": ["group:memory"]}}
     ]
   }
 }
@@ -444,13 +444,16 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   # Patch: remove invalid commands keys if agent accidentally added them
   jq 'del(.commands.gateway) | del(.commands.restart)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 
-  # Patch: ensure automation-supervisor has tools.alsoAllow=[group:memory] (idempotent)
-  HAS_SUPER_MEMORY=$(jq -r '.agents.list[] | select(.id == "automation-supervisor") | .tools.alsoAllow // [] | map(select(. == "group:memory")) | length' "$CONFIG_FILE" 2>/dev/null)
-  if [ "${HAS_SUPER_MEMORY:-0}" = "0" ]; then
-    jq '(.agents.list[] | select(.id == "automation-supervisor") | .tools.alsoAllow) = ((.agents.list[] | select(.id == "automation-supervisor") | .tools.alsoAllow // []) + ["group:memory"] | unique)' \
-      "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Added group:memory to automation-supervisor tools.alsoAllow"
-  fi
+  # Patch: ensure all named agents have tools.alsoAllow=[group:memory]
+  # Global tools.alsoAllow does not propagate to agents.list entries — must be set per-agent.
+  for agent_id in main automation-supervisor; do
+    HAS_AGENT_MEMORY=$(jq -r --arg id "$agent_id" '.agents.list[] | select(.id == $id) | .tools.alsoAllow // [] | map(select(. == "group:memory")) | length' "$CONFIG_FILE" 2>/dev/null)
+    if [ "${HAS_AGENT_MEMORY:-0}" = "0" ]; then
+      jq --arg id "$agent_id" '(.agents.list[] | select(.id == $id) | .tools.alsoAllow) = ((.agents.list[] | select(.id == $id) | .tools.alsoAllow // []) + ["group:memory"] | unique)' \
+        "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+      echo "[config] Added group:memory to $agent_id tools.alsoAllow"
+    fi
+  done
   # Patch: update automation-supervisor model if still on old sonnet value
   SUPERVISOR_MODEL=$(jq -r '.agents.list[] | select(.id == "automation-supervisor") | .model.primary // empty' "$CONFIG_FILE" 2>/dev/null)
   if [ "$SUPERVISOR_MODEL" = "openrouter/anthropic/claude-sonnet-4-5" ]; then
