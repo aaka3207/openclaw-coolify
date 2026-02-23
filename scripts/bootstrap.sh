@@ -466,6 +466,44 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     echo "[config] Added automation-supervisor Director to agents.list"
   fi
 
+  # Patch: enrich agents.defaults.models with alias, contextWindow, maxTokens
+  # contextWindow controls auto-compaction trigger point (not the model's actual API limit).
+  # Google models: 50% of actual (524288) — large context, compact at half to keep sessions fresh.
+  # Non-Google models: 200000 — encourages more frequent compaction.
+  # maxTokens: actual API limits from OpenRouter (2026-02-23).
+  jq '
+    .agents.defaults.models["openrouter/google/gemini-3.1-pro-preview"] //= {} |
+    .agents.defaults.models["openrouter/google/gemini-3.1-pro-preview"].alias = "gemini-3.1-pro-preview" |
+    .agents.defaults.models["openrouter/google/gemini-3.1-pro-preview"].contextWindow = 524288 |
+    .agents.defaults.models["openrouter/google/gemini-3.1-pro-preview"].maxTokens = 65536 |
+
+    .agents.defaults.models["openrouter/google/gemini-3-flash-preview"] //= {} |
+    .agents.defaults.models["openrouter/google/gemini-3-flash-preview"].alias = "gemini-3-flash-preview" |
+    .agents.defaults.models["openrouter/google/gemini-3-flash-preview"].contextWindow = 524288 |
+    .agents.defaults.models["openrouter/google/gemini-3-flash-preview"].maxTokens = 65535 |
+
+    .agents.defaults.models["openrouter/anthropic/claude-haiku-4-5"] //= {} |
+    .agents.defaults.models["openrouter/anthropic/claude-haiku-4-5"].alias = "claude-haiku-4-5" |
+    .agents.defaults.models["openrouter/anthropic/claude-haiku-4-5"].contextWindow = 200000 |
+    .agents.defaults.models["openrouter/anthropic/claude-haiku-4-5"].maxTokens = 64000 |
+
+    .agents.defaults.models["openrouter/anthropic/claude-sonnet-4.6"] //= {} |
+    .agents.defaults.models["openrouter/anthropic/claude-sonnet-4.6"].alias = "claude-sonnet-4.6" |
+    .agents.defaults.models["openrouter/anthropic/claude-sonnet-4.6"].contextWindow = 200000 |
+    .agents.defaults.models["openrouter/anthropic/claude-sonnet-4.6"].maxTokens = 128000 |
+
+    .agents.defaults.models["openrouter/openai/gpt-5.2"] //= {} |
+    .agents.defaults.models["openrouter/openai/gpt-5.2"].alias = "gpt-5.2" |
+    .agents.defaults.models["openrouter/openai/gpt-5.2"].contextWindow = 200000 |
+    .agents.defaults.models["openrouter/openai/gpt-5.2"].maxTokens = 128000 |
+
+    .agents.defaults.models["openrouter/minimax/minimax-m2.5"] //= {} |
+    .agents.defaults.models["openrouter/minimax/minimax-m2.5"].alias = "minimax-m2.5" |
+    .agents.defaults.models["openrouter/minimax/minimax-m2.5"].contextWindow = 200000 |
+    .agents.defaults.models["openrouter/minimax/minimax-m2.5"].maxTokens = 65536
+  ' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+  echo "[config] Enriched agents.defaults.models with alias/contextWindow/maxTokens"
+
   # Patch: add COMPANY_MEMORY.md to agents.defaults.memorySearch.extraPaths
   # Per ARCHITECTURE_REFINEMENT.md Section 4 — one patch makes it searchable by ALL agents
   COMPANY_MEM_PATH="${WORKSPACE_DIR}/COMPANY_MEMORY.md"
