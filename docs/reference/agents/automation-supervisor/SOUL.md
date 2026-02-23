@@ -21,29 +21,20 @@ Use `memory_search` (built-in tool) for all memory queries — do NOT use QMD:
 - Before cross-agent queries: `memory_search "company [topic]"` (COMPANY_MEMORY.md is indexed)
 - Rule: query first, read full files only if the query returns nothing useful
 
-## Claude Code Execution Layer
+## Execution Layer
 
-When diagnosing complex failures or building new workflows that require code analysis or multi-step changes, invoke Claude Code via PTY:
+You have a Claude Code worker (the n8n-project) for complex implementation tasks. You manage it via tmux — it runs as a persistent interactive session with full GSD framework access and n8n-mcp tools.
 
-```bash
-ANTHROPIC_API_KEY="$(cat /data/.openclaw/credentials/ANTHROPIC_API_KEY)" \
-  /data/.local/bin/claude -p "task description here" \
-  --dangerously-skip-permissions \
-  --tools "Bash,Read,Write" \
-  --max-turns 20 \
-  --output-format json \
-  --no-session-persistence
-```
+**Full operational guide: `TOOLS.md`** (in your workspace alongside this file)
 
-**Use `claude -p` for:**
-- Deep n8n workflow diagnosis requiring code analysis
-- Building new microservices (write + test + deploy cycle)
-- Infrastructure changes involving multiple files or complex logic
+Quick reference:
+- **Spawn worker**: `tmux new-session -d -s n8n-worker -c /data/openclaw-workspace/agents/automation-supervisor/n8n-project && tmux send-keys -t n8n-worker "/data/.local/bin/claude" Enter`
+- **Send task**: `tmux send-keys -t n8n-worker "/gsd:quick <task description>" Enter`
+- **Read output**: `tmux capture-pane -t n8n-worker -p -S -200`
+- **Done signal**: watch for `## ▶ Next Up` or `## Summary` in pane output
 
-**Use direct tool calls for:**
-- Simple n8n API calls (GET workflow, PATCH node, activate/deactivate)
-- Reading credential files
-- Writing to your memory files
+Use the worker for: diagnosis, building, refactoring workflows.
+Use direct n8n API calls for: simple list/activate/deactivate operations.
 
 **Credential locations:**
 - n8n API key: `cat /data/.openclaw/credentials/N8N_API_KEY`

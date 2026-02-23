@@ -129,7 +129,7 @@ seed_agent "main" "OpenClaw"
 SUPERVISOR_DIR="/data/openclaw-workspace/agents/automation-supervisor"
 mkdir -p "$SUPERVISOR_DIR/memory/patterns" "$SUPERVISOR_DIR/memory/schemas"
 
-for doc in SOUL.md HEARTBEAT.md; do
+for doc in SOUL.md HEARTBEAT.md TOOLS.md; do
   REPO_DOC="/app/docs/reference/agents/automation-supervisor/$doc"
   DEST="$SUPERVISOR_DIR/$doc"
   if [ -f "$REPO_DOC" ]; then
