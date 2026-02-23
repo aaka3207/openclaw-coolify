@@ -208,10 +208,22 @@ fi
 # ----------------------------
 # Generate Config with Prime Directive
 # ----------------------------
+# If config exists but is empty or invalid JSON, delete it so we regenerate cleanly
+if [ -f "$CONFIG_FILE" ] && ! jq empty "$CONFIG_FILE" &>/dev/null; then
+  echo "[config] Detected invalid/empty openclaw.json — removing for regeneration"
+  rm -f "$CONFIG_FILE"
+fi
+
 if [ ! -f "$CONFIG_FILE" ]; then
   echo "🏥 Generating openclaw.json with Prime Directive..."
-  # Use Coolify's OPENCLAW_GATEWAY_TOKEN if set, otherwise generate random
+  # Try openclaw doctor --fix first — it may bootstrap a valid config non-interactively
   TOKEN="${OPENCLAW_GATEWAY_TOKEN:-$(openssl rand -hex 24 2>/dev/null || node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")}"
+  openclaw doctor --fix 2>/dev/null || true
+  # If doctor produced a valid config, use it; otherwise fall back to heredoc
+  if jq empty "$CONFIG_FILE" &>/dev/null 2>&1; then
+    echo "[config] openclaw doctor --fix produced a valid config"
+  else
+    echo "[config] Falling back to heredoc config generation"
   cat >"$CONFIG_FILE" <<EOF
 {
 "commands": {
@@ -250,7 +262,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
     }
   },
   "gateway": {
-  "port": $OPENCLAW_GATEWAY_PORT,
+  "port": ${OPENCLAW_GATEWAY_PORT:-18789},
   "mode": "local",
     "bind": "loopback",
     "controlUi": {
@@ -298,6 +310,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
   }
 }
 EOF
+  fi  # end heredoc fallback
 fi
 
 # Patch existing config: enable cron if not already set
