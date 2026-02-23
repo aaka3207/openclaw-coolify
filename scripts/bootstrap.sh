@@ -444,6 +444,13 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   # Patch: remove invalid commands keys if agent accidentally added them
   jq 'del(.commands.gateway) | del(.commands.restart)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 
+  # Patch: ensure automation-supervisor has tools.alsoAllow=[group:memory] (idempotent)
+  HAS_SUPER_MEMORY=$(jq -r '.agents.list[] | select(.id == "automation-supervisor") | .tools.alsoAllow // [] | map(select(. == "group:memory")) | length' "$CONFIG_FILE" 2>/dev/null)
+  if [ "${HAS_SUPER_MEMORY:-0}" = "0" ]; then
+    jq '(.agents.list[] | select(.id == "automation-supervisor") | .tools.alsoAllow) = ((.agents.list[] | select(.id == "automation-supervisor") | .tools.alsoAllow // []) + ["group:memory"] | unique)' \
+      "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Added group:memory to automation-supervisor tools.alsoAllow"
+  fi
   # Patch: update automation-supervisor model if still on old sonnet value
   SUPERVISOR_MODEL=$(jq -r '.agents.list[] | select(.id == "automation-supervisor") | .model.primary // empty' "$CONFIG_FILE" 2>/dev/null)
   if [ "$SUPERVISOR_MODEL" = "openrouter/anthropic/claude-sonnet-4-5" ]; then
@@ -464,6 +471,9 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
          "model": {
            "primary": "openrouter/google/gemini-3.1-pro-preview",
            "fallbacks": ["openrouter/google/gemini-3-flash-preview", "openrouter/auto"]
+         },
+         "tools": {
+           "alsoAllow": ["group:memory"]
          },
          "heartbeat": {
            "every": "1h",
