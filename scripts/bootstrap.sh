@@ -293,7 +293,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
       }
     },
     "list": [
-      { "id": "main","default": true, "name": "default",  "workspace": "${OPENCLAW_WORKSPACE:-/data/openclaw-workspace}", "tools": {"alsoAllow": ["group:memory"]}}
+      { "id": "main","default": true, "name": "default",  "workspace": "${OPENCLAW_WORKSPACE:-/data/openclaw-workspace}"}
     ]
   }
 }
@@ -362,21 +362,6 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
       }
     }' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Set memorySearch provider=gemini/gemini-embedding-001 (free, hybrid BM25+vector)"
-  fi
-  # Patch: ensure memorySearch.remote.apiKey is set from BWS GEMINI_API_KEY
-  # The memory plugin does not pick up GEMINI_API_KEY from env — must be explicit in config.
-  # This runs AFTER BWS secrets are NOT yet sourced here, so we read from secrets.env directly.
-  SECRETS_FILE="$OPENCLAW_STATE/secrets.env"
-  if [ -f "$SECRETS_FILE" ]; then
-    GEMINI_KEY=$(grep "^GEMINI_API_KEY=" "$SECRETS_FILE" | cut -d= -f2-)
-    if [ -n "$GEMINI_KEY" ]; then
-      CURRENT_KEY=$(jq -r '.agents.defaults.memorySearch.remote.apiKey // empty' "$CONFIG_FILE" 2>/dev/null)
-      if [ "$CURRENT_KEY" != "$GEMINI_KEY" ]; then
-        jq --arg k "$GEMINI_KEY" '.agents.defaults.memorySearch.remote.apiKey = $k' \
-          "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-        echo "[config] Set memorySearch.remote.apiKey from BWS GEMINI_API_KEY"
-      fi
-    fi
   fi
   # Patch: enable memory_search + memory_get via tools.alsoAllow (additive).
   # Cannot use tools.allow — openclaw rejects allow+alsoAllow together, and allow with unknown
@@ -459,29 +444,12 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   # Patch: remove invalid commands keys if agent accidentally added them
   jq 'del(.commands.gateway) | del(.commands.restart)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 
-  # Patch: enable group:memory for dynamically spawned sub-agents via tools.subagents.tools.allow
-  HAS_SUBAGENT_MEMORY=$(jq -r '.tools.subagents.tools.allow // [] | map(select(. == "group:memory")) | length' "$CONFIG_FILE" 2>/dev/null)
-  if [ "${HAS_SUBAGENT_MEMORY:-0}" = "0" ]; then
-    jq '.tools.subagents.tools.allow = ((.tools.subagents.tools.allow // []) + ["group:memory"] | unique)' \
-      "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Added group:memory to tools.subagents.tools.allow"
-  fi
-  # Patch: ensure all named agents have tools.alsoAllow=[group:memory]
-  # Global tools.alsoAllow does not propagate to agents.list entries — must be set per-agent.
-  for agent_id in main automation-supervisor; do
-    HAS_AGENT_MEMORY=$(jq -r --arg id "$agent_id" '.agents.list[] | select(.id == $id) | .tools.alsoAllow // [] | map(select(. == "group:memory")) | length' "$CONFIG_FILE" 2>/dev/null)
-    if [ "${HAS_AGENT_MEMORY:-0}" = "0" ]; then
-      jq --arg id "$agent_id" '(.agents.list[] | select(.id == $id) | .tools.alsoAllow) = ((.agents.list[] | select(.id == $id) | .tools.alsoAllow // []) + ["group:memory"] | unique)' \
-        "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-      echo "[config] Added group:memory to $agent_id tools.alsoAllow"
-    fi
-  done
-  # Patch: update automation-supervisor model to minimax-m2.5 (gemini-3.1-pro-preview had stop:error issues)
+  # Patch: update automation-supervisor model if still on old sonnet value
   SUPERVISOR_MODEL=$(jq -r '.agents.list[] | select(.id == "automation-supervisor") | .model.primary // empty' "$CONFIG_FILE" 2>/dev/null)
-  if [ "$SUPERVISOR_MODEL" != "openrouter/minimax/minimax-m2.5" ]; then
-    jq '(.agents.list[] | select(.id == "automation-supervisor") | .model.primary) = "openrouter/minimax/minimax-m2.5"' \
+  if [ "$SUPERVISOR_MODEL" = "openrouter/anthropic/claude-sonnet-4-5" ]; then
+    jq '(.agents.list[] | select(.id == "automation-supervisor") | .model.primary) = "openrouter/google/gemini-3.1-pro-preview"' \
       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Updated automation-supervisor model to minimax-m2.5"
+    echo "[config] Updated automation-supervisor model to gemini-3.1-pro-preview"
   fi
   # Patch: add automation-supervisor Director to agents.list (idempotent)
   # Per ARCHITECTURE_REFINEMENT.md Section 10 — only Supervisor is hardcoded in bootstrap.sh
@@ -494,11 +462,8 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
          "workspace": $ws,
          "default": false,
          "model": {
-           "primary": "openrouter/minimax/minimax-m2.5",
+           "primary": "openrouter/google/gemini-3.1-pro-preview",
            "fallbacks": ["openrouter/google/gemini-3-flash-preview", "openrouter/auto"]
-         },
-         "tools": {
-           "alsoAllow": ["group:memory"]
          },
          "heartbeat": {
            "every": "1h",
