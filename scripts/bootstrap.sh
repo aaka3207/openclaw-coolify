@@ -28,6 +28,11 @@ if [ -f "$CONFIG_FILE" ] && command -v jq &>/dev/null; then
     jq 'del(.gateway.dangerouslyDisableDeviceAuth)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Removed invalid gateway.dangerouslyDisableDeviceAuth key"
   fi
+  # agents.defaults.tools is NOT a valid key — crashes gateway with "Unrecognized key: tools"
+  if jq -e '.agents.defaults.tools != null' "$CONFIG_FILE" &>/dev/null; then
+    jq 'del(.agents.defaults.tools)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Removed invalid agents.defaults.tools key"
+  fi
 fi
 WORKSPACE_DIR="${OPENCLAW_WORKSPACE:-/data/openclaw-workspace}"
 
