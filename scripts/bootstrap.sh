@@ -124,6 +124,71 @@ EOF
 
 seed_agent "main" "OpenClaw"
 
+# Seed Automation Supervisor workspace (cmp-based: propagates repo updates on redeploy)
+# Per ARCHITECTURE_REFINEMENT.md Section 9 and Section 10
+SUPERVISOR_DIR="/data/openclaw-workspace/agents/automation-supervisor"
+mkdir -p "$SUPERVISOR_DIR/memory/patterns" "$SUPERVISOR_DIR/memory/schemas"
+
+for doc in SOUL.md HEARTBEAT.md; do
+  REPO_DOC="/app/docs/reference/agents/automation-supervisor/$doc"
+  DEST="$SUPERVISOR_DIR/$doc"
+  if [ -f "$REPO_DOC" ]; then
+    if [ ! -f "$DEST" ]; then
+      cp "$REPO_DOC" "$DEST"
+      echo "[seed] Copied automation-supervisor/$doc"
+    elif ! cmp -s "$REPO_DOC" "$DEST"; then
+      cp "$REPO_DOC" "$DEST"
+      echo "[seed] Updated automation-supervisor/$doc (repo version changed)"
+    fi
+  fi
+done
+
+# AGENTS.md: seed if missing — agent's own version takes precedence once seeded
+if [ -f "/app/AGENTS.md" ] && [ ! -f "$SUPERVISOR_DIR/AGENTS.md" ]; then
+  cp "/app/AGENTS.md" "$SUPERVISOR_DIR/AGENTS.md"
+  echo "[seed] Copied AGENTS.md to automation-supervisor workspace"
+fi
+
+# COMPANY_MEMORY.md: seed to main workspace if missing
+COMPANY_MEM="${WORKSPACE_DIR}/COMPANY_MEMORY.md"
+if [ ! -f "$COMPANY_MEM" ] && [ -f "/app/docs/reference/COMPANY_MEMORY.md" ]; then
+  cp "/app/docs/reference/COMPANY_MEMORY.md" "$COMPANY_MEM"
+  echo "[seed] Created COMPANY_MEMORY.md in main workspace"
+fi
+
+# Weekly retrospective cron file: seed to main workspace if missing
+CRON_DIR="${WORKSPACE_DIR}/cron"
+mkdir -p "$CRON_DIR"
+RETRO_SRC="/app/workspace/cron/weekly-retrospective.md"
+RETRO_DEST="$CRON_DIR/weekly-retrospective.md"
+if [ -f "$RETRO_SRC" ] && [ ! -f "$RETRO_DEST" ]; then
+  cp "$RETRO_SRC" "$RETRO_DEST"
+  echo "[seed] Created weekly-retrospective.md cron file in main workspace"
+fi
+
+# Seed n8n-project scaffold (CLAUDE.md and .mcp.json — cmp-based)
+N8N_PROJECT_DIR="$SUPERVISOR_DIR/n8n-project"
+mkdir -p "$N8N_PROJECT_DIR/workflows"
+for f in CLAUDE.md .mcp.json; do
+  REPO_F="/app/docs/reference/agents/automation-supervisor/n8n-project/$f"
+  DEST_F="$N8N_PROJECT_DIR/$f"
+  if [ -f "$REPO_F" ]; then
+    if [ ! -f "$DEST_F" ]; then
+      cp "$REPO_F" "$DEST_F"
+      echo "[seed] Copied n8n-project/$f"
+    elif ! cmp -s "$REPO_F" "$DEST_F"; then
+      cp "$REPO_F" "$DEST_F"
+      echo "[seed] Updated n8n-project/$f (repo version changed)"
+    fi
+  fi
+done
+
+# schemas symlink: point n8n-project/schemas -> ../memory/schemas
+if [ ! -L "$N8N_PROJECT_DIR/schemas" ]; then
+  ln -sf "$SUPERVISOR_DIR/memory/schemas" "$N8N_PROJECT_DIR/schemas"
+  echo "[seed] Created n8n-project/schemas symlink -> memory/schemas"
+fi
+
 # ----------------------------
 # Resolve Hooks Token (BWS-managed or auto-generated)
 # ----------------------------
@@ -359,6 +424,41 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   jq 'del(.gateway.dangerouslyDisableDeviceAuth)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
   # Patch: remove invalid commands keys if agent accidentally added them
   jq 'del(.commands.gateway) | del(.commands.restart)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+
+  # Patch: add automation-supervisor Director to agents.list (idempotent)
+  # Per ARCHITECTURE_REFINEMENT.md Section 10 — only Supervisor is hardcoded in bootstrap.sh
+  HAS_SUPERVISOR=$(jq -r '.agents.list[] | select(.id == "automation-supervisor") | .id' "$CONFIG_FILE" 2>/dev/null)
+  if [ -z "$HAS_SUPERVISOR" ]; then
+    jq --arg ws "/data/openclaw-workspace/agents/automation-supervisor" \
+       '.agents.list += [{
+         "id": "automation-supervisor",
+         "name": "Automation Supervisor",
+         "workspace": $ws,
+         "default": false,
+         "model": {
+           "primary": "openrouter/anthropic/claude-sonnet-4-6",
+           "fallbacks": ["openrouter/google/gemini-3-flash-preview", "openrouter/auto"]
+         },
+         "heartbeat": {
+           "every": "1h",
+           "model": "openrouter/anthropic/claude-haiku-4-5"
+         }
+       }]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Added automation-supervisor Director to agents.list"
+  fi
+
+  # Patch: add COMPANY_MEMORY.md to agents.defaults.memorySearch.extraPaths
+  # Per ARCHITECTURE_REFINEMENT.md Section 4 — one patch makes it searchable by ALL agents
+  COMPANY_MEM_PATH="${WORKSPACE_DIR}/COMPANY_MEMORY.md"
+  HAS_COMPANY_PATH=$(jq -r --arg p "$COMPANY_MEM_PATH" \
+    '.agents.defaults.memorySearch.extraPaths // [] | index($p) // empty' \
+    "$CONFIG_FILE" 2>/dev/null)
+  if [ -z "$HAS_COMPANY_PATH" ]; then
+    jq --arg p "$COMPANY_MEM_PATH" \
+       '.agents.defaults.memorySearch.extraPaths = ((.agents.defaults.memorySearch.extraPaths // []) + [$p] | unique)' \
+       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Added COMPANY_MEMORY.md to agents.defaults.memorySearch.extraPaths"
+  fi
 fi
 
 # Lock config read-only so agent cannot overwrite it via bash between boots
