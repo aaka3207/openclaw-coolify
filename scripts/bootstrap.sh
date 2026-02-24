@@ -148,10 +148,42 @@ for doc in SOUL.md HEARTBEAT.md TOOLS.md; do
   fi
 done
 
+# Capability registry: cmp-based seed (propagates updates, never overwrites Supervisor's live edits
+# unless repo version changed — Supervisor adds entries, repo updates structure/initial content)
+CAPS_REPO="/app/docs/reference/agents/automation-supervisor/memory/schemas/capabilities.md"
+CAPS_DEST="$SUPERVISOR_DIR/memory/schemas/capabilities.md"
+if [ -f "$CAPS_REPO" ]; then
+  if [ ! -f "$CAPS_DEST" ]; then
+    cp "$CAPS_REPO" "$CAPS_DEST"
+    echo "[seed] Copied automation-supervisor capabilities registry"
+  fi
+  # Note: NOT cmp-based for capabilities.md — Supervisor owns live updates.
+  # Repo version is only seeded once; Supervisor appends its own capability entries.
+fi
+
 # AGENTS.md: seed if missing — agent's own version takes precedence once seeded
 if [ -f "/app/AGENTS.md" ] && [ ! -f "$SUPERVISOR_DIR/AGENTS.md" ]; then
   cp "/app/AGENTS.md" "$SUPERVISOR_DIR/AGENTS.md"
   echo "[seed] Copied AGENTS.md to automation-supervisor workspace"
+fi
+
+# Seed ONBOARDING.md for all Director workspaces that don't have one yet
+# Per ARCHITECTURE_PLAN.md Section 10: every Director should have an ONBOARDING.md
+# automation-supervisor and main are excluded (handled separately or not applicable)
+DIRECTORS_BASE="/data/openclaw-workspace/agents"
+if [ -d "$DIRECTORS_BASE" ]; then
+  for dir in "$DIRECTORS_BASE"/*/; do
+    agent_id=$(basename "$dir")
+    if [ "$agent_id" = "automation-supervisor" ] || [ "$agent_id" = "main" ]; then
+      continue
+    fi
+    ONBOARDING_DEST="$dir/ONBOARDING.md"
+    ONBOARDING_REPO="/app/docs/reference/agents/$agent_id/ONBOARDING.md"
+    if [ ! -f "$ONBOARDING_DEST" ] && [ -f "$ONBOARDING_REPO" ]; then
+      cp "$ONBOARDING_REPO" "$ONBOARDING_DEST"
+      echo "[seed] Copied ONBOARDING.md to $agent_id workspace"
+    fi
+  done
 fi
 
 # COMPANY_MEMORY.md: seed to main workspace if missing

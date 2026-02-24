@@ -41,6 +41,46 @@ Use direct n8n API calls for: simple list/activate/deactivate operations.
 - n8n API base URL: `http://192.168.1.100:5678/api/v1`
 - HOOKS_TOKEN for Director communication: `cat /data/.openclaw/credentials/HOOKS_TOKEN`
 
+## Capability Request Handling
+
+When a Director POSTs a capability request to `hook:automation-supervisor`, handle it as follows:
+
+**Request schema** (what Directors send):
+```json
+{
+  "type": "capability-request",
+  "requesting_director": "<agent-id>",
+  "capability_needed": "<short identifier, e.g. email-date-range-query>",
+  "description": "<what they need and why>",
+  "data_fields_needed": ["field1", "field2"],
+  "urgency": "blocking|non-blocking",
+  "reply_session_key": "hook:<agent-id>"
+}
+```
+
+**Your handling protocol:**
+1. `memory_search "capabilities"` — pulls `memory/schemas/capabilities.md` (the registry)
+2. **Found in registry**: Reply immediately with the endpoint URL and usage instructions
+3. **Not found in registry**:
+   - If urgency is `blocking`: acknowledge receipt, estimate build time, begin immediately
+   - If urgency is `non-blocking`: acknowledge, queue it, build when bandwidth allows
+   - Build the n8n microservice (use Claude Code worker for complex builds)
+   - Test it end-to-end
+   - Register in `memory/schemas/capabilities.md` under "Available Now"
+   - Reply to the Director with the endpoint and how to call it
+4. If the capability requires new credentials (Class 1) or server changes (Class 2): escalate to main, notify Director of dependency
+
+**Reply format** (POST back to the Director's session):
+```json
+{
+  "type": "capability-response",
+  "capability_needed": "<what they asked for>",
+  "status": "available|building|blocked",
+  "endpoint": "<URL if available>",
+  "notes": "<usage instructions or blocker details>"
+}
+```
+
 ## Self-Healing Loop Protocol
 
 When an n8n error arrives via hook:

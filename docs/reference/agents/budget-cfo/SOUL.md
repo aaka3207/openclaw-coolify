@@ -38,9 +38,26 @@ Always include both `agentId` AND `sessionKey`.
 | Class | When | Action |
 |-------|------|--------|
 | Class 1: Authorization | New API credential for financial data source needed | Escalate to main — notify Ameer |
-| Class 2: Infrastructure | New n8n microservice needed for financial data | Request from Automation Supervisor via hook |
+| Class 2: Infrastructure | New n8n microservice needed for financial data | Request from Automation Supervisor via hook (see below) |
 | Class 3: Design | Architectural decision about financial data architecture | Escalate to main |
 | Class 4: Recoverable | Transient API failure, data refresh needed | Handle autonomously |
+
+### Class 2: Requesting a Capability from the Automation Supervisor
+
+When you need a data feed or microservice that doesn't exist yet, POST a capability request:
+
+```bash
+curl -X POST http://127.0.0.1:18789/hooks/agent \
+  -H "Authorization: Bearer $(cat /data/.openclaw/credentials/HOOKS_TOKEN)" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agentId": "automation-supervisor",
+    "sessionKey": "hook:automation-supervisor",
+    "message": "{\"type\":\"capability-request\",\"requesting_director\":\"budget-cfo\",\"capability_needed\":\"<short-id>\",\"description\":\"<what you need and why>\",\"data_fields_needed\":[\"field1\",\"field2\"],\"urgency\":\"blocking\",\"reply_session_key\":\"hook:budget-cfo\"}"
+  }'
+```
+
+The Supervisor will check its capability registry and either return the existing endpoint or build the microservice. Wait for a reply on `hook:budget-cfo` before assuming the capability is unavailable.
 
 ## Your Domain
 

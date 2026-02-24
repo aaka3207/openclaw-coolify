@@ -123,6 +123,35 @@ cat > "$WORKSPACE_DIR/HEARTBEAT.md" <<HBEOF
 HBEOF
 echo "[add-director] Seeded HEARTBEAT.md"
 
+# --- Seed ONBOARDING.md stub ---
+# Per ARCHITECTURE_PLAN.md Section 10: every Director gets an ONBOARDING.md.
+# If a domain-specific ONBOARDING.md exists in the repo, use it; otherwise seed a stub.
+# The stub is a placeholder — replace it with the actual intake transcript after running
+# the Director Intake Process (main agent brief → Supervisor response → Ameer approves → Supervisor builds).
+REPO_ONBOARDING="/app/docs/reference/agents/${AGENT_ID}/ONBOARDING.md"
+if [ -f "$REPO_ONBOARDING" ]; then
+  cp "$REPO_ONBOARDING" "$WORKSPACE_DIR/ONBOARDING.md"
+  echo "[add-director] Copied domain-specific ONBOARDING.md"
+else
+  cat > "$WORKSPACE_DIR/ONBOARDING.md" <<ONEOF
+# ONBOARDING.md — ${AGENT_NAME}
+
+**Status**: STUB — Director Intake Process not yet completed
+
+This file is a placeholder. Complete the Director Intake Process before this Director goes live:
+
+1. Main agent drafts a brief: domain, data needs, capability requirements
+2. Automation Supervisor responds: what it can provide, what needs to be built, what gaps exist
+3. Ameer reviews and approves: confirms scope, provides any missing credentials
+4. Supervisor builds: required n8n microservices, registers capabilities
+5. Replace this stub with the intake transcript and full capability surface
+
+Until this is complete, this Director does NOT have confirmed data feeds or registered capabilities.
+Run: POST to hook:automation-supervisor with capability request (see SOUL.md Class 2) when you need a feed built.
+ONEOF
+  echo "[add-director] Seeded ONBOARDING.md stub (intake process required)"
+fi
+
 # --- Seed AGENTS.md if available ---
 if [ -f "/app/AGENTS.md" ]; then
   cp "/app/AGENTS.md" "$WORKSPACE_DIR/AGENTS.md"

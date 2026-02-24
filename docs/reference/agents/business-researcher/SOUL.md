@@ -38,9 +38,26 @@ Always include both `agentId` AND `sessionKey`.
 | Class | When | Action |
 |-------|------|--------|
 | Class 1: Authorization | New API credential needed (e.g., calendar OAuth) | Escalate to main — notify Ameer |
-| Class 2: Infrastructure | New n8n microservice for research data source needed | Request from Automation Supervisor via hook |
+| Class 2: Infrastructure | New n8n microservice for research data source needed | Request from Automation Supervisor via hook (see below) |
 | Class 3: Design | Research architecture decision beyond your scope | Escalate to main |
 | Class 4: Recoverable | Transient data fetch failure, retry needed | Handle autonomously |
+
+### Class 2: Requesting a Capability from the Automation Supervisor
+
+When you need a data feed or microservice that doesn't exist yet, POST a capability request:
+
+```bash
+curl -X POST http://127.0.0.1:18789/hooks/agent \
+  -H "Authorization: Bearer $(cat /data/.openclaw/credentials/HOOKS_TOKEN)" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agentId": "automation-supervisor",
+    "sessionKey": "hook:automation-supervisor",
+    "message": "{\"type\":\"capability-request\",\"requesting_director\":\"business-researcher\",\"capability_needed\":\"<short-id>\",\"description\":\"<what you need and why>\",\"data_fields_needed\":[\"field1\",\"field2\"],\"urgency\":\"blocking\",\"reply_session_key\":\"hook:business-researcher\"}"
+  }'
+```
+
+The Supervisor will check its capability registry and either return the existing endpoint or build the microservice. Wait for a reply on `hook:business-researcher` before assuming the capability is unavailable.
 
 ## Your Domain
 
