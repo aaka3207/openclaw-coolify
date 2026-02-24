@@ -508,28 +508,6 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   # Patch: remove invalid commands keys if agent accidentally added them
   jq 'del(.commands.gateway) | del(.commands.restart)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 
-  # Patch: Director models → gemini-3.1-pro-preview (capable reasoning model for all Directors)
-  # automation-supervisor: catch old sonnet-4-5, minimax-m2.5 values
-  # budget-cfo / business-researcher: catch old sonnet-4-6 default from add-director.sh
-  for director_id in automation-supervisor budget-cfo business-researcher; do
-    DIR_MODEL=$(jq -r --arg id "$director_id" '.agents.list[] | select(.id == $id) | .model.primary // empty' "$CONFIG_FILE" 2>/dev/null)
-    if [ -n "$DIR_MODEL" ] && [ "$DIR_MODEL" != "openrouter/google/gemini-3.1-pro-preview" ]; then
-      jq --arg id "$director_id" \
-         '(.agents.list[] | select(.id == $id) | .model.primary) = "openrouter/google/gemini-3.1-pro-preview"' \
-         "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-      echo "[config] Updated $director_id model to gemini-3.1-pro-preview"
-    fi
-  done
-  # Patch: Director heartbeats → gpt-5-nano (cheapest capable model for keepalives)
-  for director_id in automation-supervisor budget-cfo business-researcher; do
-    DIR_HB=$(jq -r --arg id "$director_id" '.agents.list[] | select(.id == $id) | .heartbeat.model // empty' "$CONFIG_FILE" 2>/dev/null)
-    if [ -n "$DIR_HB" ] && [ "$DIR_HB" != "openrouter/openai/gpt-5-nano" ]; then
-      jq --arg id "$director_id" \
-         '(.agents.list[] | select(.id == $id) | .heartbeat.model) = "openrouter/openai/gpt-5-nano"' \
-         "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-      echo "[config] Updated $director_id heartbeat to gpt-5-nano"
-    fi
-  done
   # Patch: add automation-supervisor Director to agents.list (idempotent)
   # Per ARCHITECTURE_REFINEMENT.md Section 10 — only Supervisor is hardcoded in bootstrap.sh
   HAS_SUPERVISOR=$(jq -r '.agents.list[] | select(.id == "automation-supervisor") | .id' "$CONFIG_FILE" 2>/dev/null)
@@ -541,7 +519,7 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
          "workspace": $ws,
          "default": false,
          "model": {
-           "primary": "openrouter/minimax/minimax-m2.5",
+           "primary": "openrouter/google/gemini-3.1-pro-preview",
            "fallbacks": ["openrouter/google/gemini-3-flash-preview", "openrouter/auto"]
          },
          "heartbeat": {
