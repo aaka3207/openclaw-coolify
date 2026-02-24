@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-# DIAGNOSTIC TRAP: keep container alive on failure so logs can be read
-trap 'echo "[BOOTSTRAP_TRAP] FAILED at line $LINENO, exit $?. Sleeping 300s for log capture..."; sleep 300' ERR
-
 # Ensure PATH includes all tool directories
 export PATH="/usr/local/go/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/data/.local/bin:/data/.npm-global/bin:/data/.bun/bin:/data/.bun/install/global/bin:/data/.claude/bin:$PATH"
 
