@@ -7,7 +7,7 @@ set -e
 
 AGENT_ID="${1:-}"
 AGENT_NAME="${2:-}"
-AGENT_MODEL="${3:-openrouter/anthropic/claude-sonnet-4-6}"
+AGENT_MODEL="${3:-openrouter/google/gemini-3.1-pro-preview}"
 
 CONFIG_FILE="${OPENCLAW_STATE_DIR:-/data/.openclaw}/openclaw.json"
 WORKSPACE_BASE="/data/openclaw-workspace/agents"
@@ -176,7 +176,7 @@ jq --arg id "$AGENT_ID" \
      },
      "heartbeat": {
        "every": "1h",
-       "model": "openrouter/anthropic/claude-haiku-4-5"
+       "model": "openrouter/openai/gpt-5-nano"
      }
    }]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 
