@@ -113,7 +113,7 @@ RUN pip3 install --break-system-packages \
 
 # cron + postgresql-client + BWS CLI (cached here to avoid rebuilding on every code change)
 ARG BWS_VERSION=1.0.0
-RUN apt-get update && apt-get install -y --no-install-recommends cron postgresql-client && rm -rf /var/lib/apt/lists/* && \
+RUN apt-get update && apt-get install -y --no-install-recommends cron postgresql-client tmux && rm -rf /var/lib/apt/lists/* && \
     BWS_ARCH=$(dpkg --print-architecture) && \
     if [ "$BWS_ARCH" = "amd64" ]; then BWS_ARCH="x86_64"; fi && \
     curl -fsSL "https://github.com/bitwarden/sdk-sm/releases/download/bws-v${BWS_VERSION}/bws-${BWS_ARCH}-unknown-linux-gnu-${BWS_VERSION}.zip" -o /tmp/bws.zip && \
