@@ -500,6 +500,18 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     jq 'del(.gateway.remote)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Removed gateway.remote (temp patch removed)"
   fi
+  # Patch: fix agents.list model fields — convert string-form model refs to object form.
+  # openclaw does not properly resolve a string model ref in agents.list when ANTHROPIC_API_KEY is
+  # set — it falls back to anthropic/claude-opus-4-6 instead of the configured OpenRouter model.
+  # Fix: for each agent with a string model field, convert to {"primary": <string>} object form.
+  jq '(.agents.list // []) |= map(
+    if (.model | type) == "string" then
+      .model = {"primary": .model, "fallbacks": ["openrouter/google/gemini-3-flash-preview", "openrouter/auto"]}
+    else
+      .
+    end
+  )' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+  echo "[config] Normalized agents.list model fields to object form (prevents Opus fallback)"
   # Patch: disable useAccessGroups so sub-agents get full operator scope without pairing
   jq '.commands.useAccessGroups = false' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
   echo "[config] Set commands.useAccessGroups=false (sub-agent scope fix)"
