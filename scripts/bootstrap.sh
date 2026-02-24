@@ -392,13 +392,16 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     echo "[config] Enabled hooks with token support"
   fi
   # Patch: enable built-in memorySearch with Gemini embeddings (free, hybrid BM25+vector)
-  # Force-update if provider is still set to openai (revoked key)
+  # Force-update if provider != gemini OR remote.apiKey is missing.
+  # CRITICAL: remote.apiKey must be set explicitly — GEMINI_API_KEY env var alone is NOT picked up by the plugin.
   MEMORY_PROVIDER=$(jq -r '.agents.defaults.memorySearch.provider // empty' "$CONFIG_FILE" 2>/dev/null)
-  if [ "$MEMORY_PROVIDER" != "gemini" ]; then
-    jq '.agents.defaults.memorySearch = {
+  MEMORY_APIKEY=$(jq -r '.agents.defaults.memorySearch.remote.apiKey // empty' "$CONFIG_FILE" 2>/dev/null)
+  if [ "$MEMORY_PROVIDER" != "gemini" ] || [ -z "$MEMORY_APIKEY" ]; then
+    jq --arg apikey "${GEMINI_API_KEY:-}" '.agents.defaults.memorySearch = {
       "enabled": true,
       "provider": "gemini",
       "model": "gemini-embedding-001",
+      "remote": {"apiKey": $apikey},
       "sources": ["memory"],
       "sync": {"watch": true, "onSearch": true, "onSessionStart": true},
       "query": {
@@ -414,7 +417,7 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
         }
       }
     }' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Set memorySearch provider=gemini/gemini-embedding-001 (free, hybrid BM25+vector)"
+    echo "[config] Set memorySearch provider=gemini/gemini-embedding-001 with remote.apiKey"
   fi
   # Patch: enable memory_search + memory_get via tools.alsoAllow (additive).
   # Cannot use tools.allow — openclaw rejects allow+alsoAllow together, and allow with unknown
