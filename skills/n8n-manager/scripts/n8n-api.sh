@@ -4,7 +4,7 @@
 # Auth: reads API key from credential file (written by bootstrap.sh)
 # Docs: https://docs.n8n.io/api/
 
-N8N_BASE_URL="${N8N_API_URL:-http://192.168.1.100:5678}"
+N8N_BASE_URL="${N8N_API_URL:-https://n8n.aakashe.org}"
 N8N_API_KEY_FILE="/data/.openclaw/credentials/N8N_API_KEY"
 
 if [ ! -f "$N8N_API_KEY_FILE" ]; then

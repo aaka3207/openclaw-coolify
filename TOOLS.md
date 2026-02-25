@@ -6,12 +6,14 @@ Operational reference for tools and external services available to the main agen
 
 ## n8n Workflow Automation
 
-You have direct access to the n8n API for building, managing, and repairing workflows.
+You have the **n8n-manager skill** available — use it for standard operations (list, create, activate, execute workflows). The skill handles auth and error formatting automatically.
+
+For operations the skill doesn't cover (reading executions, partial node edits, bulk changes), use the API directly.
 
 **API base URL**: `https://n8n.aakashe.org/api/v1`
 **API key**: `cat /data/.openclaw/credentials/N8N_API_KEY`
 
-### Common Operations
+### Common Operations (direct API)
 
 ```bash
 N8N_KEY=$(cat /data/.openclaw/credentials/N8N_API_KEY)
