@@ -84,11 +84,11 @@ seed_agent() {
 
   mkdir -p "$dir"
 
-  # MAIN agent: sync SOUL.md and BOOTSTRAP.md from repo (hybrid approach)
+  # MAIN agent: sync SOUL.md, BOOTSTRAP.md, TOOLS.md from repo (hybrid approach)
   # Repo is source of truth — copies when repo version differs from volume.
   # UI edits survive until the next repo update changes the file.
   if [ "$id" = "main" ]; then
-    for doc in SOUL.md BOOTSTRAP.md; do
+    for doc in SOUL.md BOOTSTRAP.md TOOLS.md; do
       if [ -f "/app/$doc" ]; then
         if [ ! -f "$dir/$doc" ]; then
           echo "[seed] Copying $doc to $dir"
@@ -130,44 +130,6 @@ EOF
 
 seed_agent "main" "OpenClaw"
 
-# Seed Automation Supervisor workspace (cmp-based: propagates repo updates on redeploy)
-# Per ARCHITECTURE_REFINEMENT.md Section 9 and Section 10
-SUPERVISOR_DIR="/data/openclaw-workspace/agents/automation-supervisor"
-mkdir -p "$SUPERVISOR_DIR/memory/patterns" "$SUPERVISOR_DIR/memory/schemas"
-
-for doc in SOUL.md HEARTBEAT.md TOOLS.md; do
-  REPO_DOC="/app/docs/reference/agents/automation-supervisor/$doc"
-  DEST="$SUPERVISOR_DIR/$doc"
-  if [ -f "$REPO_DOC" ]; then
-    if [ ! -f "$DEST" ]; then
-      cp "$REPO_DOC" "$DEST"
-      echo "[seed] Copied automation-supervisor/$doc"
-    elif ! cmp -s "$REPO_DOC" "$DEST"; then
-      cp "$REPO_DOC" "$DEST"
-      echo "[seed] Updated automation-supervisor/$doc (repo version changed)"
-    fi
-  fi
-done
-
-# Capability registry: cmp-based seed (propagates updates, never overwrites Supervisor's live edits
-# unless repo version changed — Supervisor adds entries, repo updates structure/initial content)
-CAPS_REPO="/app/docs/reference/agents/automation-supervisor/memory/schemas/capabilities.md"
-CAPS_DEST="$SUPERVISOR_DIR/memory/schemas/capabilities.md"
-if [ -f "$CAPS_REPO" ]; then
-  if [ ! -f "$CAPS_DEST" ]; then
-    cp "$CAPS_REPO" "$CAPS_DEST"
-    echo "[seed] Copied automation-supervisor capabilities registry"
-  fi
-  # Note: NOT cmp-based for capabilities.md — Supervisor owns live updates.
-  # Repo version is only seeded once; Supervisor appends its own capability entries.
-fi
-
-# AGENTS.md: seed if missing — agent's own version takes precedence once seeded
-if [ -f "/app/AGENTS.md" ] && [ ! -f "$SUPERVISOR_DIR/AGENTS.md" ]; then
-  cp "/app/AGENTS.md" "$SUPERVISOR_DIR/AGENTS.md"
-  echo "[seed] Copied AGENTS.md to automation-supervisor workspace"
-fi
-
 # Seed ONBOARDING.md for all Director workspaces that don't have one yet
 # Per ARCHITECTURE_PLAN.md Section 10: every Director should have an ONBOARDING.md
 # automation-supervisor and main are excluded (handled separately or not applicable)
@@ -202,29 +164,6 @@ RETRO_DEST="$CRON_DIR/weekly-retrospective.md"
 if [ -f "$RETRO_SRC" ] && [ ! -f "$RETRO_DEST" ]; then
   cp "$RETRO_SRC" "$RETRO_DEST"
   echo "[seed] Created weekly-retrospective.md cron file in main workspace"
-fi
-
-# Seed n8n-project scaffold (CLAUDE.md and .mcp.json — cmp-based)
-N8N_PROJECT_DIR="$SUPERVISOR_DIR/n8n-project"
-mkdir -p "$N8N_PROJECT_DIR/workflows"
-for f in CLAUDE.md .mcp.json; do
-  REPO_F="/app/docs/reference/agents/automation-supervisor/n8n-project/$f"
-  DEST_F="$N8N_PROJECT_DIR/$f"
-  if [ -f "$REPO_F" ]; then
-    if [ ! -f "$DEST_F" ]; then
-      cp "$REPO_F" "$DEST_F"
-      echo "[seed] Copied n8n-project/$f"
-    elif ! cmp -s "$REPO_F" "$DEST_F"; then
-      cp "$REPO_F" "$DEST_F"
-      echo "[seed] Updated n8n-project/$f (repo version changed)"
-    fi
-  fi
-done
-
-# schemas symlink: point n8n-project/schemas -> ../memory/schemas
-if [ ! -L "$N8N_PROJECT_DIR/schemas" ]; then
-  ln -sf "$SUPERVISOR_DIR/memory/schemas" "$N8N_PROJECT_DIR/schemas"
-  echo "[seed] Created n8n-project/schemas symlink -> memory/schemas"
 fi
 
 # ----------------------------
@@ -520,27 +459,16 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   jq 'del(.gateway.dangerouslyDisableDeviceAuth)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
   # Patch: remove invalid commands keys if agent accidentally added them
   jq 'del(.commands.gateway) | del(.commands.restart)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-
-  # Patch: add automation-supervisor Director to agents.list (idempotent)
-  # Per ARCHITECTURE_REFINEMENT.md Section 10 — only Supervisor is hardcoded in bootstrap.sh
+  # Patch: remove invalid heartbeat keys agent may write (intervalMinutes is not valid — use "every")
+  jq 'del(.agents.defaults.heartbeat.intervalMinutes) |
+      (.agents.list // []) |= map(del(.heartbeat.intervalMinutes))' \
+    "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+  # Cleanup: remove automation-supervisor Director (retired — n8n capabilities moved to main agent)
   HAS_SUPERVISOR=$(jq -r '.agents.list[] | select(.id == "automation-supervisor") | .id' "$CONFIG_FILE" 2>/dev/null)
-  if [ -z "$HAS_SUPERVISOR" ]; then
-    jq --arg ws "/data/openclaw-workspace/agents/automation-supervisor" \
-       '.agents.list += [{
-         "id": "automation-supervisor",
-         "name": "Automation Supervisor",
-         "workspace": $ws,
-         "default": false,
-         "model": {
-           "primary": "openrouter/google/gemini-3.1-pro-preview",
-           "fallbacks": ["openrouter/google/gemini-3-flash-preview", "openrouter/auto"]
-         },
-         "heartbeat": {
-           "every": "1h",
-           "model": "openrouter/openai/gpt-5-nano"
-         }
-       }]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Added automation-supervisor Director to agents.list"
+  if [ -n "$HAS_SUPERVISOR" ]; then
+    jq '.agents.list |= map(select(.id != "automation-supervisor"))' \
+      "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Removed automation-supervisor from agents.list (retired)"
   fi
 
   # Cleanup: remove invalid contextWindow/maxTokens from model entries (written by broken patch c4cbc46)
@@ -830,24 +758,6 @@ else
   echo "[nova] NOVA Memory disabled (set NOVA_MEMORY_ENABLED=true to enable — waiting for issue #8807)"
 fi
 # --- End NOVA Memory Installation ---
-
-# ----------------------------
-# Reseed automation-supervisor workspace files from repo (idempotent)
-# Always copies SOUL.md and HEARTBEAT.md from /app/docs/reference/agents/automation-supervisor/
-# so the main agent cannot permanently overwrite them with task-specific content.
-# memory/patterns/ and other workspace-written files are never touched.
-# ----------------------------
-SUPERVISOR_WS="/data/openclaw-workspace/agents/automation-supervisor"
-if [ -d "$SUPERVISOR_WS" ]; then
-  for f in SOUL.md HEARTBEAT.md TOOLS.md; do
-    if [ -f "/app/docs/reference/agents/automation-supervisor/$f" ]; then
-      cp "/app/docs/reference/agents/automation-supervisor/$f" "$SUPERVISOR_WS/$f"
-    fi
-  done
-  mkdir -p "$SUPERVISOR_WS/memory/patterns"
-  [ -f "/app/AGENTS.md" ] && cp /app/AGENTS.md "$SUPERVISOR_WS/AGENTS.md"
-  echo "[supervisor] Reseeded workspace files from repo (SOUL.md, HEARTBEAT.md, TOOLS.md, AGENTS.md)"
-fi
 
 # ----------------------------
 # Run OpenClaw
