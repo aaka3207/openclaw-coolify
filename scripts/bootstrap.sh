@@ -832,6 +832,22 @@ fi
 # --- End NOVA Memory Installation ---
 
 # ----------------------------
+# Reseed automation-supervisor workspace files from repo (idempotent)
+# Always copies SOUL.md and HEARTBEAT.md from /app/docs/reference/agents/automation-supervisor/
+# so the main agent cannot permanently overwrite them with task-specific content.
+# memory/patterns/ and other workspace-written files are never touched.
+# ----------------------------
+SUPERVISOR_WS="/data/openclaw-workspace/agents/automation-supervisor"
+if [ -d "$SUPERVISOR_WS" ]; then
+  for f in SOUL.md HEARTBEAT.md TOOLS.md; do
+    if [ -f "/app/docs/reference/agents/automation-supervisor/$f" ]; then
+      cp "/app/docs/reference/agents/automation-supervisor/$f" "$SUPERVISOR_WS/$f"
+    fi
+  done
+  mkdir -p "$SUPERVISOR_WS/memory/patterns"
+  [ -f "/app/AGENTS.md" ] && cp /app/AGENTS.md "$SUPERVISOR_WS/AGENTS.md"
+  echo "[supervisor] Reseeded workspace files from repo (SOUL.md, HEARTBEAT.md, TOOLS.md, AGENTS.md)"
+fi
 
 # ----------------------------
 # Run OpenClaw

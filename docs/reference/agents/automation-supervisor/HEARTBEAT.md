@@ -13,7 +13,7 @@
 - [ ] Any capability requests from Directors? (`memory_search "capability request"`)
 - [ ] Any workflows currently in error state?
   ```bash
-  curl -s "http://192.168.1.100:5678/api/v1/executions?status=error&limit=5" \
+  curl -s "https://n8n.aakashe.org/api/v1/executions?status=error&limit=5" \
     -H "X-N8N-API-KEY: $(cat /data/.openclaw/credentials/N8N_API_KEY)"
   ```
 - [ ] Anything important to write to `memory/SYSTEM_HEALTH.md`?

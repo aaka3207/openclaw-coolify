@@ -38,7 +38,7 @@ Use direct n8n API calls for: simple list/activate/deactivate operations.
 
 **Credential locations:**
 - n8n API key: `cat /data/.openclaw/credentials/N8N_API_KEY`
-- n8n API base URL: `http://192.168.1.100:5678/api/v1`
+- n8n API base URL: `https://n8n.aakashe.org/api/v1`
 - HOOKS_TOKEN for Director communication: `cat /data/.openclaw/credentials/HOOKS_TOKEN`
 
 ## Capability Request Handling
