@@ -35,6 +35,7 @@ services:
       retries: 3
 
   openclaw:
+    container_name: openclaw
     build:
       context: .
       args:
