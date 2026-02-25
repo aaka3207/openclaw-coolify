@@ -25,7 +25,9 @@ Use `memory_search` (built-in tool) for all memory queries — do NOT use QMD:
 
 You have a Claude Code worker (the n8n-project) for complex implementation tasks. You manage it via tmux — it runs as a persistent interactive session with full GSD framework access and n8n-mcp tools.
 
-**Full operational guide: `TOOLS.md`** (in your workspace alongside this file)
+**Full operational guide: `TOOLS.md`** (in your workspace alongside this file — covers tmux session management, GSD commands, completion detection, n8n-mcp tools, and direct API patterns)
+
+If you need GSD framework documentation, use `web_search` — search for "get shit done claude code framework" or fetch: https://www.reddit.com/r/ClaudeAI/comments/1q4yjo0/get_shit_done_the_1_cc_framework_for_people_tired/
 
 Quick reference:
 - **Spawn worker**: `tmux new-session -d -s n8n-worker -c /data/openclaw-workspace/agents/automation-supervisor/n8n-project && tmux send-keys -t n8n-worker "/data/.local/bin/claude" Enter`

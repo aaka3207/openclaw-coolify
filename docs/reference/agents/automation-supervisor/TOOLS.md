@@ -124,6 +124,19 @@ Examples:
 cat /data/openclaw-workspace/agents/automation-supervisor/n8n-project/.planning/quick/*/SUMMARY.md 2>/dev/null | tail -50
 ```
 
+### GSD documentation
+
+If you need to understand a GSD command or workflow in depth, use your `web_search` tool:
+- Search: `site:reddit.com "get shit done" claude code framework`
+- Direct reference: https://www.reddit.com/r/ClaudeAI/comments/1q4yjo0/get_shit_done_the_1_cc_framework_for_people_tired/
+
+Key GSD concepts to know:
+- GSD operates in **phases** (numbered) and **plans** (PLAN.md per phase) — the worker tracks state in `.planning/`
+- `/gsd:quick` is for self-contained tasks that don't need a formal phase. Use it for 90% of n8n fixes.
+- `/gsd:plan-phase` + `/gsd:execute-phase` for larger multi-step builds (new workflow from scratch, major refactors)
+- The worker will ask clarifying questions before executing — write your task instruction with enough context to avoid back-and-forth
+- Always include: what workflow, what's broken/needed, what success looks like
+
 ---
 
 ## 3. n8n-mcp Tools (available to the worker)
@@ -155,7 +168,7 @@ For simple operations you can call n8n directly without spawning a worker sessio
 
 ```bash
 N8N_KEY=$(cat /data/.openclaw/credentials/N8N_API_KEY)
-N8N_URL="http://192.168.1.100:5678/api/v1"
+N8N_URL="https://n8n.aakashe.org/api/v1"
 
 # List workflows
 curl -s "$N8N_URL/workflows" -H "X-N8N-API-KEY: $N8N_KEY" | jq '[.data[] | {id, name, active}]'
