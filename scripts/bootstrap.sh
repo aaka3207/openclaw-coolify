@@ -84,19 +84,12 @@ seed_agent() {
 
   mkdir -p "$dir"
 
-  # MAIN agent: sync SOUL.md, BOOTSTRAP.md, TOOLS.md from repo (hybrid approach)
-  # Repo is source of truth — copies when repo version differs from volume.
-  # UI edits survive until the next repo update changes the file.
+  # MAIN agent: seed SOUL.md, BOOTSTRAP.md, TOOLS.md only if missing — agent owns them after first boot
   if [ "$id" = "main" ]; then
     for doc in SOUL.md BOOTSTRAP.md TOOLS.md; do
-      if [ -f "/app/$doc" ]; then
-        if [ ! -f "$dir/$doc" ]; then
-          echo "[seed] Copying $doc to $dir"
-          cp "/app/$doc" "$dir/$doc"
-        elif ! cmp -s "/app/$doc" "$dir/$doc"; then
-          echo "[seed] Updating $doc (repo version changed)"
-          cp "/app/$doc" "$dir/$doc"
-        fi
+      if [ -f "/app/$doc" ] && [ ! -f "$dir/$doc" ]; then
+        cp "/app/$doc" "$dir/$doc"
+        echo "[seed] Seeded $doc to $dir (first boot)"
       fi
     done
     # AGENTS.md: seed if missing only — agent's own version takes precedence
