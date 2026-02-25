@@ -515,6 +515,31 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
        "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Added COMPANY_MEMORY.md to agents.defaults.memorySearch.extraPaths"
   fi
+  # Patch: deny gateway tool globally — prevents any agent from patching config via gateway tool
+  # (chmod 444 on openclaw.json covers file writes; this covers config.apply/config.patch via gateway process)
+  HAS_GATEWAY_DENY=$(jq -r '.tools.deny // [] | index("gateway") // empty' "$CONFIG_FILE" 2>/dev/null)
+  if [ -z "$HAS_GATEWAY_DENY" ]; then
+    jq '.tools.deny = ((.tools.deny // []) + ["gateway"] | unique)' \
+      "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Added gateway to tools.deny (prevents config.apply/patch via agent)"
+  fi
+  # Patch: restrict analyst Directors (budget-cfo, business-researcher) — deny exec/write/edit/apply_patch
+  # These agents are read+communicate only; they have no reason to run shell commands or write files.
+  for analyst_id in budget-cfo business-researcher; do
+    HAS_ANALYST=$(jq -r --arg id "$analyst_id" '.agents.list[] | select(.id == $id) | .id' "$CONFIG_FILE" 2>/dev/null)
+    if [ -n "$HAS_ANALYST" ]; then
+      ANALYST_HAS_DENY=$(jq -r --arg id "$analyst_id" \
+        '.agents.list[] | select(.id == $id) | .tools.deny // [] | index("exec") // empty' \
+        "$CONFIG_FILE" 2>/dev/null)
+      if [ -z "$ANALYST_HAS_DENY" ]; then
+        jq --arg id "$analyst_id" '
+          (.agents.list[] | select(.id == $id) | .tools) |= (. // {}) |
+          (.agents.list[] | select(.id == $id) | .tools.deny) |= (. // []) + ["exec","write","edit","apply_patch"] | unique
+        ' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+        echo "[config] Restricted $analyst_id: denied exec, write, edit, apply_patch"
+      fi
+    fi
+  done
   # Patch: Matrix channel config (Phase 2) — uses env vars from Coolify
   # Only patch if MATRIX_HOMESERVER and MATRIX_PASSWORD are set and channel not yet configured
   if [ -n "${MATRIX_HOMESERVER:-}" ] && [ -n "${MATRIX_PASSWORD:-}" ]; then
