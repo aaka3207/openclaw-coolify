@@ -807,6 +807,23 @@ if command -v tailscaled >/dev/null 2>&1; then
     tailscale --socket=/var/run/tailscale/tailscaled.sock serve --bg "$GATEWAY_PORT" >/dev/null 2>&1 \
       && echo "[tailscale] Serve configured: https://${TS_HOSTNAME:-openclaw-server}.[tailnet].ts.net -> :${GATEWAY_PORT}" \
       || echo "[tailscale] WARNING: tailscale serve pre-config failed (Serve may need enabling in Tailscale admin console)"
+
+    # Patch controlUi.allowedOrigins to include the Tailscale HTTPS URL so the browser
+    # origin is trusted (gateway is on loopback, browser hits https://<hostname>.<tailnet>).
+    TS_DOMAIN=$(tailscale --socket=/var/run/tailscale/tailscaled.sock status --json 2>/dev/null \
+      | jq -r '.MagicDNSSuffix // empty' 2>/dev/null || true)
+    if [ -n "$TS_DOMAIN" ]; then
+      TS_ORIGIN="https://${TS_HOSTNAME:-openclaw-server}.${TS_DOMAIN}"
+      chmod 644 "$OPENCLAW_CONFIG"
+      jq --arg origin "$TS_ORIGIN" '
+        if (.gateway.controlUi.allowedOrigins // [] | map(. == $origin) | any) then .
+        else .gateway.controlUi.allowedOrigins = ((.gateway.controlUi.allowedOrigins // []) + [$origin])
+        end
+      ' "$OPENCLAW_CONFIG" > /tmp/openclaw-config-patched.json \
+        && mv /tmp/openclaw-config-patched.json "$OPENCLAW_CONFIG" \
+        && echo "[tailscale] Patched controlUi.allowedOrigins: $TS_ORIGIN"
+      chmod 444 "$OPENCLAW_CONFIG"
+    fi
   fi
 
   # Log tailscale serve status for diagnostics
