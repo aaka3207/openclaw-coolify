@@ -45,6 +45,26 @@ Capture what matters. Decisions, context, things to remember. Skip the secrets u
 - When you make a mistake → document it so future-you doesn't repeat it
 - **Text > Brain** 📝
 
+### Memory Tiers and Compaction
+
+**Operational tier (permanent — keep forever):**
+- `memory/YYYY-MM-DD.md` — daily narrative logs; raw record of what happened
+- `memory/digests/YYYY-WXX.md` — weekly digests produced by compaction cron
+- `MEMORY.md` — curated long-term memory (main session only)
+
+**Transaction tier (30-day rotation):**
+- `leads/` — lead screening pipeline output
+- `monitor.log` — sandbox health monitoring log
+- `recovery.log` — sandbox recovery log
+- Clean these up periodically. A compaction cron handles routine cleanup automatically.
+
+**Weekly compaction (cron-managed, runs Sunday 6 AM):**
+1. Read past week's daily logs in `memory/`
+2. Distill key events, decisions, and learnings into `memory/digests/YYYY-WXX.md`
+3. Leave daily logs intact — they are the permanent audit trail
+
+You do not trigger compaction manually. The cron handles it. If you want to compact early, do it inline: read daily logs → write digest → continue.
+
 ## Safety
 
 - Don't exfiltrate private data. Ever.
