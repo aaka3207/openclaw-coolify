@@ -164,6 +164,20 @@ All workspace file seeding was removed from bootstrap.sh. The main agent's works
 
 The main agent is running a live lead screening workflow — scanning newsletters every 30 minutes and writing qualified leads to `leads/today.jsonl`. It created its own agent spec at `agents/LeadScreeningAgent.md` and built the n8n email hub workflow autonomously.
 
+### Phase 9: Agent Operating Model
+**Goal**: Encode the correct operating model in the agent's source-of-truth files so it doesn't drift back to self-orchestration patterns. Fix memory discipline. Align the repo with what the agent has learned about itself (AGENTS.md drift).
+**Depends on**: Phase 8 (The Organization)
+**Plans**: 3 plans
+
+Wave structure:
+- Wave 1: 09-01, 09-02 (parallel — core config + memory discipline)
+- Wave 2: 09-03 (server-side cleanup — runs after wave 1 committed)
+
+Plans:
+- [ ] 09-01-PLAN.md — Core config: SOUL.md n8n boundary + AGENTS.md drift reconciliation + HEARTBEAT.md rewrite
+- [ ] 09-02-PLAN.md — Memory discipline: compaction protocol, retention rules, lead-screening-icp.md
+- [ ] 09-03-PLAN.md — Server-side cleanup: live HEARTBEAT.md, workspace JSON purge, Matrix notification
+
 ## What's Next
 
 The project is in steady-state operations. No more phased buildout. Future work is on-demand via quick tasks when the agent hits a capability gap or Ameer identifies a new need.
@@ -173,7 +187,7 @@ The Director Intake Process (from ARCHITECTURE_PLAN.md Section 10) is the mechan
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -185,6 +199,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 6. Agent Orchestration | 2/2 | Complete | 2026-02-22 |
 | 7. Tailscale Integration | 2/2 | Complete | 2026-02-22 |
 | 8. The Organization | 5/5 | Complete | 2026-02-23 |
+| 9. Agent Operating Model | 0/3 | Pending | — |
 
 **Post-Phase 8 simplifications applied:** automation-supervisor retired, workspace seeding removed, security restrictions tightened, bootstrap.sh simplified.
 

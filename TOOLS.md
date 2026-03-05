@@ -1,88 +1,80 @@
 # TOOLS.md — Main Agent
 
-Operational reference for tools and external services available to the main agent.
+Operational reference for tools available to the main agent.
 
 ---
 
-## n8n Workflow Automation
+## Endpoint Registry
 
-> **Role boundary:** Ameer builds and manages n8n workflows. You do NOT create, update, activate, or repair n8n workflows. You CAN query workflow status and executions to diagnose issues and then surface findings to Ameer. You CAN use the n8n API to check execution logs when diagnosing a failure. If you identify a pipeline need, document it and tell Ameer — you do not build it.
+Your tools are HTTP endpoints. You call them; you don't manage what's behind them. Ameer adds entries here as tools are provisioned.
 
-You have the **n8n-manager skill** available — use it for standard operations (list, create, activate, execute workflows). The skill handles auth and error formatting automatically.
+| Name | URL | What it does |
+|------|-----|-------------|
+| *(none yet — Ameer adds entries as tools are set up)* | | |
 
-For operations the skill doesn't cover (reading executions, partial node edits, bulk changes), use the API directly.
-
-**API base URL**: `https://n8n.aakashe.org/api/v1`
-**API key**: `cat /data/.openclaw/credentials/N8N_API_KEY`
-
-### Common Operations (direct API)
-
+**How to call an endpoint:**
 ```bash
-N8N_KEY=$(cat /data/.openclaw/credentials/N8N_API_KEY)
-N8N_URL="https://n8n.aakashe.org/api/v1"
-
-# List all workflows
-curl -s "$N8N_URL/workflows" -H "X-N8N-API-KEY: $N8N_KEY" | jq '[.data[] | {id, name, active}]'
-
-# Get a specific workflow (full JSON)
-curl -s "$N8N_URL/workflows/<id>" -H "X-N8N-API-KEY: $N8N_KEY" | jq .
-
-# Get failed executions
-curl -s "$N8N_URL/executions?status=error&limit=10" -H "X-N8N-API-KEY: $N8N_KEY" \
-  | jq '.data[] | {id, workflowId, startedAt, error: .data.resultData.error.message}'
-
-# Activate a workflow
-curl -s -X POST "$N8N_URL/workflows/<id>/activate" -H "X-N8N-API-KEY: $N8N_KEY"
-
-# Deactivate a workflow
-curl -s -X POST "$N8N_URL/workflows/<id>/deactivate" -H "X-N8N-API-KEY: $N8N_KEY"
-
-# Update a workflow (replace full JSON)
-curl -s -X PUT "$N8N_URL/workflows/<id>" \
-  -H "X-N8N-API-KEY: $N8N_KEY" \
+curl -s -X POST "https://n8n.aakashe.org/webhook/<id>" \
   -H "Content-Type: application/json" \
-  -d @workflow.json
-
-# Create a new workflow
-curl -s -X POST "$N8N_URL/workflows" \
-  -H "X-N8N-API-KEY: $N8N_KEY" \
-  -H "Content-Type: application/json" \
-  -d @new-workflow.json
-
-# Test/trigger a workflow manually
-curl -s -X POST "$N8N_URL/workflows/<id>/execute" -H "X-N8N-API-KEY: $N8N_KEY"
+  -d '{"action": "read", "pageId": "..."}'
 ```
 
-### Diagnosing Failures
+If you identify a need for a new tool endpoint, document the capability you need and tell Ameer.
 
-When a workflow fails:
-1. Get recent failed executions (see above)
-2. Get the full workflow JSON to inspect node configs
-3. Fix the node in the JSON (edit locally with bash/jq or write a temp file)
-4. PUT the updated workflow back
-5. Activate and test
+---
 
-### Workflow JSON Structure
+## Lobster — Deterministic Pipelines
 
-n8n workflows are JSON objects with:
-- `name` — workflow name
-- `nodes` — array of node objects (each has `id`, `name`, `type`, `parameters`, `position`)
-- `connections` — wiring between nodes
-- `settings` — workflow-level settings (e.g. `saveExecutionProgress`)
-- `active` — boolean
+Use Lobster when Ameer asks you to run a multi-step task where some steps need his approval before proceeding (e.g., "process my inbox and pause before sending replies").
 
-To safely edit a single node parameter without touching the rest:
-```bash
-# Fetch, edit with jq, put back
-curl -s "$N8N_URL/workflows/<id>" -H "X-N8N-API-KEY: $N8N_KEY" > /tmp/wf.json
-# Edit /tmp/wf.json with jq
-jq '(.nodes[] | select(.name == "HTTP Request") | .parameters.url) = "https://new-url.com"' \
-  /tmp/wf.json > /tmp/wf-fixed.json
-curl -s -X PUT "$N8N_URL/workflows/<id>" \
-  -H "X-N8N-API-KEY: $N8N_KEY" \
-  -H "Content-Type: application/json" \
-  -d @/tmp/wf-fixed.json
+**When to reach for Lobster:**
+- Multi-step task where side effects (send, post, delete) need a human gate before executing
+- You want to show Ameer a preview of what you're about to do, wait for approval, then continue
+- Task needs to be resumable if interrupted
+
+**Basic pattern:**
+```json
+{
+  "action": "run",
+  "pipeline": "exec --json --shell 'step-one --json' | exec --stdin json --shell 'step-two --json' | approve --preview-from-stdin --prompt 'Apply these changes?'",
+  "timeoutMs": 30000
+}
 ```
+
+**Resume after approval:**
+```json
+{
+  "action": "resume",
+  "token": "<resumeToken>",
+  "approve": true
+}
+```
+
+Full docs: `docs/tools/lobster.md`
+
+---
+
+## Incoming Webhook Spec
+
+When designing an orchestration with Ameer, here's how to wire an external system to call you:
+
+```
+POST http://127.0.0.1:18789/hooks/agent
+Authorization: Bearer <HOOKS_TOKEN>
+Content-Type: application/json
+
+{
+  "agentId": "main",
+  "sessionKey": "hook:main",
+  "message": "..."
+}
+```
+
+**sessionKey conventions:**
+- `hook:main` — resumes your persistent main session (use for ongoing tasks)
+- `hook:main:<task>` — isolated session for a specific task (doesn't mix with main context)
+
+HOOKS_TOKEN: `cat /data/.openclaw/credentials/HOOKS_TOKEN`
 
 ---
 
@@ -115,8 +107,7 @@ Always include both `agentId` AND `sessionKey` — `agentId` routes to the corre
 ## Escalation to User (Ameer)
 
 Escalate when:
-- New credentials or API keys are needed (cannot self-provision)
+- A new tool endpoint is needed (you document the capability, Ameer provisions it)
+- New credentials or API keys are needed
 - Infrastructure changes required (Dockerfile, new Docker service, port changes)
 - Architectural decisions beyond your scope
-
-For everything else — credential needs, infrastructure changes, architectural decisions, new n8n workflows — escalate to Ameer. Do not attempt to build or repair n8n workflows autonomously.
