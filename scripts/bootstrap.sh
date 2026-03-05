@@ -814,15 +814,15 @@ if command -v tailscaled >/dev/null 2>&1; then
       | jq -r '.MagicDNSSuffix // empty' 2>/dev/null || true)
     if [ -n "$TS_DOMAIN" ]; then
       TS_ORIGIN="https://${TS_HOSTNAME:-openclaw-server}.${TS_DOMAIN}"
-      chmod 644 "$OPENCLAW_CONFIG"
+      chmod 644 "$CONFIG_FILE"
       jq --arg origin "$TS_ORIGIN" '
         if (.gateway.controlUi.allowedOrigins // [] | map(. == $origin) | any) then .
         else .gateway.controlUi.allowedOrigins = ((.gateway.controlUi.allowedOrigins // []) + [$origin])
         end
-      ' "$OPENCLAW_CONFIG" > /tmp/openclaw-config-patched.json \
-        && mv /tmp/openclaw-config-patched.json "$OPENCLAW_CONFIG" \
+      ' "$CONFIG_FILE" > /tmp/openclaw-config-patched.json \
+        && mv /tmp/openclaw-config-patched.json "$CONFIG_FILE" \
         && echo "[tailscale] Patched controlUi.allowedOrigins: $TS_ORIGIN"
-      chmod 444 "$OPENCLAW_CONFIG"
+      chmod 444 "$CONFIG_FILE"
     fi
   fi
 
