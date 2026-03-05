@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 
 ## Current Position
 
-Phase: 09-agent-operating-model (in progress)
-Plan: 09-01 COMPLETE. 09-02 COMPLETE. 09-03 pending.
-Status: 3 Directors live (main, budget-cfo, business-researcher). automation-supervisor retired. Main agent owns n8n directly. Lead screening workflow running autonomously every 30 min.
-Last activity: 2026-03-05 - Phase 09-02: memory tiers encoded in AGENTS.md, weekly compaction cron created, lead-screening ICP document created.
+Phase: 09-agent-operating-model (COMPLETE)
+Plan: 09-01 COMPLETE. 09-02 COMPLETE. 09-03 COMPLETE.
+Status: 3 Directors live (main, budget-cfo, business-researcher). automation-supervisor retired. Main agent owns n8n directly. Lead screening workflow running autonomously every 30 min. Agent operating model fully locked.
+Last activity: 2026-03-05 - Phase 09-03: live HEARTBEAT.md updated to periodic-check model, 55 stale n8n workflow JSON files purged from workspace root, Matrix notification sent.
 
 Progress: [████████████████████] ALL PHASES COMPLETE — Steady-State Operations
 
@@ -85,6 +85,9 @@ Recent decisions affecting current work:
 - [Phase 09-01 - 2026-03-05]: QMD and NOVA Memory references removed from SOUL.md — superseded by file-based memory model
 - [Phase 09-agent-operating-model]: Memory tiering: operational tier (daily logs, digests, MEMORY.md) permanent; transaction tier (leads/, monitor.log, recovery.log) rotate after 30 days
 - [Phase 09-agent-operating-model]: ICP document lives in docs/reference/ as repo-owned behavioral config; lead scoring 1-5 scale, >=3 to leads/today.jsonl, 4-5 surfaced to Ameer
+- [Phase 09-03 - 2026-03-05]: HEARTBEAT.md lives at workspace root, not agents/main/ — seed-once means redeploy does NOT propagate template
+- [Phase 09-03 - 2026-03-05]: Gateway bind=loopback — hooks POST must use `docker exec ... curl http://127.0.0.1:18789` (host curl gets connection-reset)
+- [Phase 09-03 - 2026-03-05]: heredoc-over-SSH-with-sudo silently empties file — use scp+sudo bash script pattern for reliable volume writes
 
 ### Lessons Learned (Phase 1)
 
@@ -200,9 +203,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-05 — Phase 09-02: Memory tiers encoded in AGENTS.md (operational vs transaction tier separation). Weekly compaction cron created (workspace/cron/memory-compaction.md). Lead screening ICP document created (docs/reference/agents/main/lead-screening-icp.md with 1-5 scoring guide and leads/today.jsonl output spec). Three task commits + SUMMARY.
-Stopped at: 09-02 COMPLETE.
-Resume at: 09-03-PLAN.md (next plan in phase 09).
+Last session: 2026-03-05 — Phase 09-03: Live HEARTBEAT.md updated to periodic-check model (was n8n pipeline monitoring). 55 stale workflow JSON files purged from workspace root. Matrix notification sent via hooks. Phase 9 fully complete.
+Stopped at: 09-03 COMPLETE. Phase 09 COMPLETE.
+Resume at: No active phase. Steady-state operations.
 
 ### Key Details
 - Container: `openclaw-ukwkggw4o8go0wgg804oc4oo-203702516523` (as of 2026-03-05; changes on redeploy)
