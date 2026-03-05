@@ -244,10 +244,12 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   # Patch: enable built-in memorySearch with Gemini embeddings (free, hybrid BM25+vector)
   # Force-update if provider != gemini OR remote.apiKey is missing.
   # CRITICAL: remote.apiKey must be set explicitly — GEMINI_API_KEY env var alone is NOT picked up by the plugin.
+  # Read from secrets.env directly — BWS injection runs after this block so env var is not yet populated.
+  GEMINI_KEY="${GEMINI_API_KEY:-$(grep '^GEMINI_API_KEY=' /data/.openclaw/secrets.env 2>/dev/null | cut -d= -f2- || true)}"
   MEMORY_PROVIDER=$(jq -r '.agents.defaults.memorySearch.provider // empty' "$CONFIG_FILE" 2>/dev/null)
   MEMORY_APIKEY=$(jq -r '.agents.defaults.memorySearch.remote.apiKey // empty' "$CONFIG_FILE" 2>/dev/null)
   if [ "$MEMORY_PROVIDER" != "gemini" ] || [ -z "$MEMORY_APIKEY" ]; then
-    jq --arg apikey "${GEMINI_API_KEY:-}" '.agents.defaults.memorySearch = {
+    jq --arg apikey "${GEMINI_KEY}" '.agents.defaults.memorySearch = {
       "enabled": true,
       "provider": "gemini",
       "model": "gemini-embedding-001",

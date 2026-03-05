@@ -278,7 +278,6 @@ If you learned something new (a workaround, a failure, a user preference), write
 ### Domain Pattern Files
 - `memory/patterns/preferences.md` — User preferences and workflow choices
 - `memory/patterns/sandbox-creation.md` — Sandbox creation and management patterns
-- `memory/patterns/n8n-workflows.md` — n8n workflow creation and API patterns
 - Create new domain files as needed: `memory/patterns/<domain>.md`
 
 ### Memory Hygiene
