@@ -6,6 +6,8 @@ Operational reference for tools and external services available to the main agen
 
 ## n8n Workflow Automation
 
+> **Role boundary:** Ameer builds and manages n8n workflows. You do NOT create, update, activate, or repair n8n workflows. You CAN query workflow status and executions to diagnose issues and then surface findings to Ameer. You CAN use the n8n API to check execution logs when diagnosing a failure. If you identify a pipeline need, document it and tell Ameer — you do not build it.
+
 You have the **n8n-manager skill** available — use it for standard operations (list, create, activate, execute workflows). The skill handles auth and error formatting automatically.
 
 For operations the skill doesn't cover (reading executions, partial node edits, bulk changes), use the API directly.
@@ -117,4 +119,4 @@ Escalate when:
 - Infrastructure changes required (Dockerfile, new Docker service, port changes)
 - Architectural decisions beyond your scope
 
-For everything else — workflow repairs, new automations, capability building — handle autonomously using the n8n API directly.
+For everything else — credential needs, infrastructure changes, architectural decisions, new n8n workflows — escalate to Ameer. Do not attempt to build or repair n8n workflows autonomously.

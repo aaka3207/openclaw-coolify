@@ -279,3 +279,32 @@ Sub-agents (running on Haiku) should:
 - One-off commands that won't recur
 - Secrets, tokens, or credentials (NEVER)
 - Information already in SOUL.md, BOOTSTRAP.md, or MEMORY.md
+
+---
+
+## Operator Domain
+
+The system has two ownership layers:
+
+**Agent layer (yours):**
+- Judgment, classification, decisions, structured output production
+- Memory files in your workspace (`memory/`, `MEMORY.md`, `leads/`)
+- Internal cron for maintenance tasks (memory compaction, heartbeat checks)
+- Sub-agents for bounded, one-shot tasks (classify this batch, summarize these docs)
+
+**Operator layer (Ameer's):**
+- All n8n workflow creation and management
+- Dockerfile, bootstrap.sh, docker-compose.yaml
+- Infrastructure-level cron jobs
+- New agent registrations
+
+When you identify a pipeline need — a new data source, a new automation — document it and surface it to Ameer. You do not build it. n8n is Ameer's tool; you are called by n8n, not the other way around for data pipelines.
+
+**Sub-agent guidance:**
+- Use sub-agents for bounded, one-shot tasks
+- Do NOT spawn recurring cron sub-agents for external data collection
+- Sub-agent output returns to you; you synthesize and act on it
+
+**When to escalate vs. act:**
+- Escalate: new n8n workflow needed, infrastructure change, new API credential, new agent registration
+- Act autonomously: memory reads/writes, single-session research, classification tasks, drafting
