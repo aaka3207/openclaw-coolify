@@ -764,12 +764,18 @@ if command -v tailscaled >/dev/null 2>&1; then
   # Verify daemon is responsive before proceeding
   tailscale --socket=/var/run/tailscale/tailscaled.sock status >/dev/null 2>&1 || echo "[tailscale] WARNING: tailscaled socket exists but daemon not yet responsive"
 
-  # Authenticate (idempotent — skips if already logged in from persisted state)
-  if [ -n "${TS_AUTHKEY:-}" ]; then
+  # Authenticate — only if not already connected (preserves working persisted state)
+  TS_ALREADY_RUNNING=$(tailscale --socket=/var/run/tailscale/tailscaled.sock status --json 2>/dev/null \
+    | python3 -c "import json,sys; d=json.load(sys.stdin); print('yes' if d.get('BackendState')=='Running' else 'no')" 2>/dev/null || echo "no")
+  if [ "$TS_ALREADY_RUNNING" = "yes" ]; then
+    echo "[tailscale] Already connected — skipping tailscale up"
+  elif [ -n "${TS_AUTHKEY:-}" ]; then
     tailscale --socket=/var/run/tailscale/tailscaled.sock up \
       --auth-key="${TS_AUTHKEY}" \
       --hostname="${TS_HOSTNAME:-openclaw-server}" \
-      --accept-routes 2>&1 || echo "[tailscale] WARNING: tailscale up failed (may already be authenticated)"
+      --accept-routes 2>&1 || echo "[tailscale] WARNING: tailscale up failed — check TS_AUTHKEY in Coolify (may be expired)"
+  else
+    echo "[tailscale] WARNING: TS_AUTHKEY not set and not already connected — tailscale will not work"
   fi
 
   # Wait for tailscale to be connected (up to 30s)
