@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 
 ## Current Position
 
-Phase: 8 COMPLETE — all phases done
-Plan: All plans complete. Post-Phase 8 simplifications applied.
+Phase: 09-agent-operating-model (in progress)
+Plan: 09-01 COMPLETE. 09-02 and 09-03 pending.
 Status: 3 Directors live (main, budget-cfo, business-researcher). automation-supervisor retired. Main agent owns n8n directly. Lead screening workflow running autonomously every 30 min.
-Last activity: 2026-03-05 - Quick task 14: updated planning docs to reflect post-Phase-8 reality.
+Last activity: 2026-03-05 - Phase 09-01: encoded correct agent operating model (n8n boundary, Operator Domain, HEARTBEAT template) into SOUL.md, TOOLS.md, AGENTS.md, HEARTBEAT.md.
 
 Progress: [████████████████████] ALL PHASES COMPLETE — Steady-State Operations
 
@@ -78,6 +78,10 @@ Recent decisions affecting current work:
 - [Post-Phase 8 - 2026-03]: analyst Directors (budget-cfo, business-researcher) restricted: deny exec/write/edit/apply_patch — read and communicate only (commit ee32594)
 - [Post-Phase 8 - 2026-03]: OpenClaw upgraded to 2026.3.2 (commit 903d625)
 - [Post-Phase 8 - 2026-03]: container_name: openclaw added to docker-compose.yaml for stable naming
+- [Phase 09-01 - 2026-03-05]: Agent is n8n judgment layer only — called by n8n, returns output, never builds or manages workflows
+- [Phase 09-01 - 2026-03-05]: Operator Domain split encoded in AGENTS.md — agent owns memory+judgment, Ameer owns n8n+Dockerfile+bootstrap+infra
+- [Phase 09-01 - 2026-03-05]: HEARTBEAT.md template excludes n8n pipeline monitoring — n8n Error Handler workflow handles failures
+- [Phase 09-01 - 2026-03-05]: QMD and NOVA Memory references removed from SOUL.md — superseded by file-based memory model
 
 ### Lessons Learned (Phase 1)
 
@@ -193,9 +197,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-05 — Quick task 14: Updated ROADMAP.md, STATE.md, ARCHITECTURE_PLAN.md, ARCHITECTURE_REFINEMENT.md to reflect post-Phase-8 reality. Conducted agent workspace audit via SSH. Confirmed automation-supervisor retired, main agent running lead screening every 30 min, 3 new skills built autonomously.
-Stopped at: Planning docs updated. All commits pushed.
-Resume at: No active work. Next work is on-demand — check with Ameer on priorities.
+Last session: 2026-03-05 — Phase 09-01: Encoded correct agent operating model into behavioral config files. Updated SOUL.md (n8n Boundary + Memory Architecture), TOOLS.md (role boundary note + escalation update), AGENTS.md (Operator Domain section), HEARTBEAT.md template (inbox/calendar/leads checklist). Three task commits + SUMMARY.
+Stopped at: 09-01 COMPLETE.
+Resume at: 09-02-PLAN.md (next plan in phase 09).
 
 ### Key Details
 - Container: `openclaw-ukwkggw4o8go0wgg804oc4oo-203702516523` (as of 2026-03-05; changes on redeploy)
