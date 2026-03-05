@@ -1,5 +1,7 @@
 # The Organization — Architecture Plan
-**Version**: 2.0 | **Date**: 2026-02-22 | **Status**: APPROVED FOR PLANNING
+**Version**: 3.0 | **Date**: 2026-03-05 | **Status**: UPDATED — automation-supervisor retired, main agent owns n8n directly
+
+> **Updated 2026-03-05**: automation-supervisor has been retired. Main agent now owns n8n capabilities directly via the n8n-manager skill. The org chart below and all references have been updated to reflect the current 3-agent model.
 
 ---
 
@@ -15,25 +17,25 @@ This is a fully autonomous AI workforce running 24/7 on a home server. The Main 
 
 ```
 Ameer
-└── Main Agent (Chief of Staff)
-    ├── Automation Supervisor (Platform & Infrastructure)
-    │   ├── Owns: all n8n workflows, canonical data feeds, schema registry
-    │   ├── Builds: microservices, capability layer, reusable sub-workflows
-    │   ├── Repairs: failed workflows, broken nodes, capability gaps
-    │   └── Executes: via Claude Code (PTY) on the server
+└── Main Agent (Chief of Staff + n8n Operations)
+    ├── Owns: all n8n workflows, canonical data feeds, n8n error handling
+    ├── Builds: microservices, automation, reusable sub-workflows
+    ├── Executes: via n8n-manager skill + direct n8n API calls
     │
-    ├── Budget CFO (Finance)
+    ├── Budget CFO (Finance) [read-only, no exec/write]
     │   └── Consumes: monarch.transaction feed, email.received (financial filter)
     │
-    ├── Business Researcher (Research & Comms)
+    ├── Business Researcher (Research & Comms) [read-only, no exec/write]
     │   └── Consumes: email.received (newsletters), calendar feed
     │
     └── [Future Directors — added via intake process]
 
 Workflow Workers (ephemeral)
-    └── Spawned on demand by any Director for high-volume, stateless tasks
+    └── Spawned on demand by Main Agent via sessions_spawn
         Model: Gemini Flash | Lifespan: single task
 ```
+
+> **Note (2026-03-05):** Automation Supervisor was retired after Phase 8 completion. The separation into a dedicated "platform engineering" agent proved unnecessary — the main agent handles n8n operations directly with lower overhead and fewer failure modes. If n8n complexity grows significantly, a dedicated supervisor can be re-added via `add-director.sh`.
 
 ---
 
@@ -45,11 +47,12 @@ Each Director lives in a persistent OpenClaw session identified by a dedicated k
 
 | Agent | Session Key | Primary Trigger |
 |-------|-------------|----------------|
-| Main Agent | `main` | Direct conversation |
-| Automation Supervisor | `hook:automation-supervisor` | n8n error webhook + main agent delegation |
+| Main Agent | `main` | Direct conversation + n8n webhooks + cron (lead screening, etc.) |
 | Budget CFO | `hook:budget-cfo` | OpenClaw cron (every 4-6h) + financial email events |
 | Business Researcher | `hook:business-researcher` | n8n newsletter webhook + email events |
-| Workflow Workers | ephemeral | `sessions_spawn` from any Director |
+| Workflow Workers | ephemeral | `sessions_spawn` from Main Agent |
+
+> **Note (2026-03-05):** `hook:automation-supervisor` session key is retired. n8n Global Error Handler workflow routes errors to main agent or logs them.
 
 ### Director-to-Director Communication
 
@@ -61,68 +64,46 @@ Directors POST to main agent when escalation is required. Main agent decides whe
 
 ---
 
-## 3. The Automation Supervisor
+## 3. n8n Operations (Main Agent Direct)
 
-The Supervisor is not just a fixer — it is the platform engineering team. Its job is to build and maintain the infrastructure that all other Directors run on.
+> **Updated 2026-03-05:** The Automation Supervisor was retired. The Main Agent now handles all n8n operations directly.
 
 ### 3a. Claude Code as the Execution Layer
 
-The Supervisor operates in two modes:
-
-**Reasoning mode** (OpenClaw session `hook:automation-supervisor`):
-- Receives error webhooks, capability requests, and delegation from main
-- Diagnoses problems, designs fixes, writes task specifications
-- Model: Claude Sonnet 4.6 (high reasoning, scoped invocations only)
+The main agent can invoke Claude Code when deep diagnosis or code-level work is needed:
 
 **Execution mode** (Claude Code via PTY on server):
-- Supervisor invokes `claude` CLI via PTY with a full task spec
+- Main agent invokes `claude` CLI via PTY with a task spec
 - Claude Code reads workflow JSON, edits nodes, commits to git, deploys via n8n API
 - Uses Ameer's Claude Max plan — no API token cost
-- Auth persists in `~/.claude/` on server (one-time terminal login)
+- Auth persists in `/data/.claude/` on server
 
-The task spec the Supervisor writes for Claude Code includes:
-- The exact problem and diagnosis
-- Relevant workflow JSON
-- n8n API credential file path
-- Allowed tools and scope
-- Expected output format
-
-### 3b. Self-Healing Loop
+### 3b. Self-Healing Loop (Simplified)
 
 ```
 n8n workflow fails
   → Global Error Trigger fires
-  → POST to /hooks with sessionKey: "hook:automation-supervisor"
-  → Supervisor wakes up with error context
-  → Checks memory/patterns/ for known fix (QMD search)
-    → Known pattern: apply fix directly via n8n API
-    → Unknown pattern: invoke Claude Code via PTY for deep diagnosis
-  → Fix deployed and activated
-  → Pattern recorded in memory/patterns/n8n-error-recovery.md
-  → Notification sent to main agent: "Fixed workflow X"
+  → n8n logs the error (current state: error handler active, routing TBD)
+  → Main agent notified if escalation threshold met
+  → Main agent diagnoses and fixes via n8n-manager skill
+  → Pattern recorded in memory/patterns/
 ```
 
 ### 3c. Capability Request Handling
 
-When any Director hits a capability gap:
+When the main agent or a Director hits a capability gap:
 
 ```
 Director: "I need emails from March 15-22 to reconcile this expense"
-  → POST to hook:automation-supervisor with capability request schema
-  → Supervisor checks capability registry (memory/schemas/capabilities.md)
-    → Exists: returns endpoint
-    → Missing: builds n8n microservice, registers it, notifies Director
+  → POST/escalate to main agent with capability request
+  → Main agent checks capabilities registry
+    → Exists: returns endpoint to Director
+    → Missing: main agent builds n8n microservice via n8n-manager skill
 ```
 
-### 3d. QMD Memory for Pattern Evolution
+### 3d. Memory-Driven Pattern Evolution
 
-The Supervisor's entire workspace is indexed by QMD. This enables cross-workflow pattern recognition over time:
-
-- "This is the 3rd workflow needing date-range filtering — build a reusable sub-workflow"
-- "Monarch failures correlate with Chase batch windows — rate limit pattern"
-- "Business Researcher has requested email capabilities 4 times — build a dedicated email query API"
-
-The Supervisor evolves from reactive fixer to proactive infrastructure architect.
+The main agent's memory/patterns/ tracks n8n workflow patterns over time. The built-in memorySearch backend (hybrid BM25 + vector) surfaces these patterns before each repair attempt.
 
 ---
 
@@ -266,26 +247,25 @@ The Director comes online knowing exactly what it has, what the Supervisor built
 
 ## 11. Infrastructure Requirements
 
-### New vs. Existing
+### Current Status (2026-03-05)
 
 | Requirement | Status |
 |-------------|--------|
-| OpenClaw multi-agent (agents.list) | Partially done — n8n-specialist exists |
+| OpenClaw multi-agent (agents.list) | Done — main, budget-cfo, business-researcher |
 | n8n hooks endpoint | Done |
 | BWS secrets management | Done |
-| memorySearch (QMD) | Done |
-| AGENTS.md + memory/patterns/ seeding | Done |
-| Phase 7 Tailscale (off-LAN access) | Planned |
-| `claude` CLI installed + auth'd on server | **New** |
-| automation-supervisor in agents.list | **New** |
-| budget-cfo in agents.list | **New** |
-| business-researcher in agents.list | **New** |
-| workflow-worker (generic) in agents.list | **New** |
-| n8n Global Error Trigger workflow | **New** |
-| Canonical email.received feed | **New** |
-| Canonical monarch.transaction feed | **New** |
-| Schema registry in Supervisor workspace | **New** |
-| COMPANY_MEMORY.md + weekly cron | **New** |
+| memorySearch (built-in hybrid BM25+vector) | Done |
+| AGENTS.md + memory/patterns/ (agent-owned) | Done — agent manages its own workspace |
+| Phase 7 Tailscale (off-LAN access) | Done — https://openclaw-server.tailad0efc.ts.net/ |
+| `claude` CLI installed + auth'd on server | Done — `/data/.claude/` OAuth subscription |
+| budget-cfo in agents.list | Done (read-only permissions) |
+| business-researcher in agents.list | Done (read-only permissions) |
+| n8n Global Error Trigger workflow | Done |
+| Email hub n8n workflow | Done — agent built autonomously |
+| Lead screening cron (n8n → main agent) | Done — running every 30min, writing leads/today.jsonl |
+| COMPANY_MEMORY.md + weekly cron | Done (COMPANY_MEMORY.md seeded at first run) |
+| workflow-worker (generic) in agents.list | Not needed — sessions_spawn used directly |
+| automation-supervisor in agents.list | Retired — main agent owns n8n directly |
 
 ---
 
@@ -298,4 +278,5 @@ The Director comes online knowing exactly what it has, what the Supervisor built
 ---
 
 *Plan authored: 2026-02-22*
-*Based on: ARCHITECTURE_PLAN.md v1.0 (agent-authored) + design review session*
+*v3.0 updated: 2026-03-05 — automation-supervisor retired, main agent owns n8n, org chart simplified, infrastructure table updated to reflect live state*
+*Based on: ARCHITECTURE_PLAN.md v1.0 (agent-authored) + design review session + post-Phase-8 operational experience*

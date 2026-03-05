@@ -1,6 +1,8 @@
 # Architecture Refinement Notes
-**Date**: 2026-02-22 | **Status**: SUPERSEDES Phase 8 plans where noted
-**Companion to**: ARCHITECTURE_PLAN.md v2.0
+**Date**: 2026-02-22 | **Updated**: 2026-03-05 | **Status**: PARTIALLY SUPERSEDED — see notes below
+**Companion to**: ARCHITECTURE_PLAN.md v3.0
+
+> **2026-03-05 Update:** The Automation Supervisor described throughout this document has been retired after Phase 8. bootstrap.sh no longer seeds the Automation Supervisor workspace. The main agent owns n8n operations directly via the n8n-manager skill. Sections referencing the Automation Supervisor as "special infrastructure" reflect the original design rationale but are no longer current. Section 10 (Automation Supervisor Is Special) is SUPERSEDED. The add-director.sh mechanism and Director lifecycle model (Sections 1-2) remain valid and in use.
 
 ---
 
@@ -205,28 +207,15 @@ This ensures the next incoming event gets clean context.
 
 ---
 
-## 10. Automation Supervisor Is Special
+## 10. Automation Supervisor Is Special — SUPERSEDED (2026-03-05)
 
-The Automation Supervisor is the only Director seeded by bootstrap.sh. Reasons:
-- It's infrastructure — must exist before the org can run
-- It owns the `add-director.sh` mechanism (all other Director creation flows through it)
-- It needs a richer SOUL.md than the generic Director template (Claude Code PTY, escalation rules, session protocol)
+> **SUPERSEDED**: The Automation Supervisor was retired after Phase 8 operational experience showed that a dedicated infrastructure Director added overhead without enough benefit for the current scale. The main agent now handles n8n operations directly via the n8n-manager skill.
 
-**Supervisor-specific SOUL.md must include**:
-1. **Session/memory protocol** — check session context first; write to memory after major tasks; call /new after completing a task
-2. **Claude Code PTY execution** — `/data/.claude/bin/claude -p "..."  --dangerously-skip-permissions --tools "Bash,Read,Write,Edit" --max-turns 20 --output-format json`
-3. **Credential file path** — `/data/.openclaw/credentials/N8N_API_KEY`
-4. **Escalation taxonomy** — Class 1-4 (from ARCHITECTURE_PLAN.md)
-5. **Session key patterns** — event stream vs task sessions
-6. **add-director.sh usage** — how to onboard new Directors
+~~The Automation Supervisor is the only Director seeded by bootstrap.sh.~~
 
-**Supervisor HEARTBEAT.md** (session-start checklist):
-```
-## On Session Start
-- [ ] Read memory/SYSTEM_HEALTH.md (last 20 lines)
-- [ ] Run: memory_search "pending repairs"
-- [ ] Run: memory_search "pending capability requests"
-```
+**Current state**: bootstrap.sh does NOT seed any Director workspace. All workspace files are owned and managed by the agents themselves (seed-once pattern via add-director.sh, then agent-owned). The main agent's SOUL.md contains the n8n operation protocols that were originally intended for the Supervisor.
+
+The `add-director.sh` mechanism and Director intake process (Section 1, Section 2) remain fully valid and in use for future Director additions.
 
 ---
 

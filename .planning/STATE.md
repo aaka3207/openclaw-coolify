@@ -4,24 +4,24 @@
 
 See: .planning/PROJECT.md (updated 2026-02-14)
 
-**Core value:** A secure, self-hosted AI agent that runs on my home server with proper secrets management and persistent memory — accessible only from my LAN.
-**Current focus:** Phase 8: The Organization — Director Workforce (next)
+**Core value:** A secure, self-hosted AI agent that runs on my home server with proper secrets management and persistent memory — accessible only from my LAN (and via Tailscale for off-LAN HTTPS access).
+**Current focus:** Steady-state operations. No active phase. Future work via quick tasks.
 
 ## Current Position
 
-Phase: 8 IN PROGRESS
-Plan: 08-01 COMPLETE — 08-02 next
-Status: 08-01 complete. automation-supervisor registered in agents.list, add-director.sh lifecycle script created, COMPANY_MEMORY.md indexed via extraPaths, n8n-project worker scaffold created. Deploy to verify runtime behavior.
-Last activity: 2026-02-23 - Completed quick-12: Phase 8 memory gap analysis. 5 gaps found: memory_search dead references in SOUL.md, AGENTS.md excludes Directors from MEMORY.md, add-director.sh missing AGENTS.md + memory/ seeding, no MEMORY.md template for Directors, 08-05 verification missing MEMORY.md check.
+Phase: 8 COMPLETE — all phases done
+Plan: All plans complete. Post-Phase 8 simplifications applied.
+Status: 3 Directors live (main, budget-cfo, business-researcher). automation-supervisor retired. Main agent owns n8n directly. Lead screening workflow running autonomously every 30 min.
+Last activity: 2026-03-05 - Quick task 14: updated planning docs to reflect post-Phase-8 reality.
 
-Progress: [████████████████████] Phase 8 Wave 1 complete — 08-02 next
+Progress: [████████████████████] ALL PHASES COMPLETE — Steady-State Operations
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 15+ (8 phases × 2+ plans each, plus quick tasks)
 - Average duration: ~28 min
-- Total execution time: ~3.1 hours
+- Total execution time: ~5 hours
 
 **By Phase:**
 
@@ -32,10 +32,10 @@ Progress: [████████████████████] Phase 8
 | 03-secrets-management | 1 (quick) | ~20 min | ~20 min |
 | 04-memory-system | 1 | ~40 min | ~40 min |
 | 05-n8n-integration | 1 | ~8 min | ~8 min |
-
-*Updated after each plan completion*
 | Phase 07-tailscale-integration P01 | 178 | 3 tasks | 4 files |
 | Phase 08-director-workforce P01 | ~25 min | 4 tasks | 9 files |
+
+*Updated after each plan completion*
 
 ## Accumulated Context
 
@@ -72,6 +72,12 @@ Recent decisions affecting current work:
 - [Phase 08-01]: ANTHROPIC_API_KEY NOT in BWS loop — Claude Code uses OAuth subscription auth (claude auth login), not API key
 - [Phase 08-01]: COMPANY_MEMORY.md indexed via agents.defaults.memorySearch.extraPaths — single patch makes it searchable by all agents; QMD not used
 - [Phase 08-01]: File-based cron (workspace/cron/) behavior unverified — OPEN QUESTION at deploy time
+- [Post-Phase 8 - 2026-03]: automation-supervisor retired — main agent owns n8n directly via n8n-manager skill (commit 7406d8a)
+- [Post-Phase 8 - 2026-03]: All workspace file seeding removed from bootstrap.sh — agent owns its workspace entirely (commit 3fb579c)
+- [Post-Phase 8 - 2026-03]: gateway tool denied globally for all agents (commit ee32594)
+- [Post-Phase 8 - 2026-03]: analyst Directors (budget-cfo, business-researcher) restricted: deny exec/write/edit/apply_patch — read and communicate only (commit ee32594)
+- [Post-Phase 8 - 2026-03]: OpenClaw upgraded to 2026.3.2 (commit 903d625)
+- [Post-Phase 8 - 2026-03]: container_name: openclaw added to docker-compose.yaml for stable naming
 
 ### Lessons Learned (Phase 1)
 
@@ -107,6 +113,13 @@ Recent decisions affecting current work:
 - `docker exec` cannot see env vars set via `source` in bootstrap.sh — they're only in the gateway process tree.
 - OpenClaw has native cron system (`cron.enabled: true` in openclaw.json) separate from system cron.
 
+### Lessons Learned (Post-Phase 8)
+
+- automation-supervisor separation proved unnecessary overhead at current scale — main agent handles n8n directly with fewer failure modes.
+- Workspace file seeding creates "bootstrap overwrites agent changes" conflicts — agent-owned workspace (seed-once) is cleaner.
+- Analyst Director security restrictions (no exec/write) are important — prevents accidental or injected code execution.
+- container_name: openclaw is essential for stable `docker logs openclaw` and script references — container name changes every Coolify deploy without it.
+
 ### Pending Todos
 
 - ~~Run post-deploy script for optional deps~~ (DONE: deps baked into Dockerfile via quick-1)
@@ -116,15 +129,40 @@ Recent decisions affecting current work:
 - ~~**Fix stale SOUL.md on volume**~~ (DONE: bootstrap.sh now uses cmp to update when repo version differs)
 - ~~Fix duplicate matrix plugin warning~~ (DONE: entrypoint.sh removes stale /data/.openclaw/extensions/matrix)
 - ~~Start cron daemon reliably after deploys~~ (DONE: entrypoint.sh runs cron as root before dropping privileges)
-- Matrix plugin missing `@vector-im/matrix-bot-sdk` — upstream 2026.2.15 issue, not our bug
-- Remove debug logging (ERR trap, extra echo statements) from bootstrap.sh once fully stable
-- Verify NOVA memory catch-up cron is running under gosu/openclaw user
-- Install mcpporter skill: `npx playbooks add skill openclaw/skills --skill mcporter`
-- Upgrade OpenClaw to 2026.2.19 (security fix: path containment for plugins/hooks)
 - ~~Execute Phase 6 plan 06-01~~ (DONE: memorySearch + subagents patches committed, deploy in progress)
-- Execute Phase 6 plans (06-02, 06-03) — 06-02 now unblocked
+- ~~Execute Phase 6 plans (06-02, 06-03)~~ (DONE)
 - ~~**Sub-agent temp patch**~~ (DONE: committed in bootstrap.sh — gateway.mode=remote + remote.token + --allow-unconfigured). Remove when CHANGELOG #22582 ships (watch next release after 2026.2.21-2).
-- Push committed changes: SOUL.md (ACIP), BOOTSTRAP.md (persistence rules)
+- ~~Push committed changes: SOUL.md (ACIP), BOOTSTRAP.md (persistence rules)~~ (DONE)
+- Remove debug logging (ERR trap, extra echo statements) from bootstrap.sh once fully stable
+- Install mcpporter skill: `npx playbooks add skill openclaw/skills --skill mcporter`
+- n8n Global Error Handler: verify it routes errors correctly to main agent (current: active but routing TBD)
+- WhatsApp health monitor: restarting every 15-30 min (hit 3/hr limit) — investigate if WhatsApp is needed or disable
+
+### Agent Workspace Audit (2026-03-05)
+
+**Audit scope**: Files modified in last 7 days in `/var/lib/docker/volumes/ukwkggw4o8go0wgg804oc4oo_openclaw-data/_data/openclaw-workspace/`
+
+**Active agents**: main, budget-cfo, business-researcher (automation-supervisor retired)
+
+**Files the agent created/modified autonomously this week:**
+
+| File/Directory | Activity |
+|----------------|----------|
+| `agents/LeadScreeningAgent.md` | Agent created its own sub-agent spec document for lead screening |
+| `leads/today.jsonl` | Live output file — lead screening results, updated every 30 min |
+| `leads/archive/2026-03-04.jsonl` | Previous day's leads archived automatically |
+| `monitor.log` (795 KB) | n8n workflow monitoring log, continuously appended |
+| `recovery.log` (567 KB) | Recovery/retry log, continuously appended |
+| `skills/mcp-myfitnesspal/SKILL.md` | Agent built a new MCP skill for MyFitnessPal |
+| `skills/metamcp-tools/SKILL.md` | Agent built a MetaMCP tools skill |
+| `state/metamcp/tools-*.json` | MetaMCP tool state tracking files (diff, latest, prev, tmp) |
+| `state/openclaw_release.json` | OpenClaw release tracking (checked v2026.3.2 = latest) |
+
+**Key finding**: The main agent is running a live **lead screening workflow** — it scans newsletters via an Email Hub n8n workflow every 30 minutes and writes qualified leads (companies/contacts matching Akashe Strategies ICP) to `leads/today.jsonl`. It created `agents/LeadScreeningAgent.md` as its own operational document. The agent also built new skills autonomously: mcp-myfitnesspal and metamcp-tools.
+
+**Container logs (last 30 min)**: Lead scanning running on 30-min cadence. Recent scans at 17:41, 18:11, 18:41, 19:11 UTC found no new leads (batch contents: concert alerts, grocery deals, loan offers, LinkedIn job alerts). WhatsApp health monitor restarting frequently (hitting 3/hr rate limit) — investigate.
+
+**OpenClaw version on server**: v2026.3.2 (latest as of check on 2026-03-05)
 
 ### Quick Tasks Completed
 
@@ -142,49 +180,31 @@ Recent decisions affecting current work:
 | 10 | Audit: file path fixes from quick-9 + 06-02-PLAN.md vs bootstrap.sh reality — gap analysis | 2026-02-22 | `d561835` | [10-did-we-follow-the-plan-on-file-path-fixe](./quick/10-did-we-follow-the-plan-on-file-path-fixe/) |
 | 11 | Verify Phase 8 plans against ARCHITECTURE_PLAN.md + ARCHITECTURE_REFINEMENT.md | 2026-02-22 | `9796fca` | [11-verify-against-the-two-primary-architect](./quick/11-verify-against-the-two-primary-architect/) |
 | 12 | Phase 8 memory handling gap analysis — Director memory setup, memory_search availability, AGENTS.md gaps | 2026-02-23 | `a64afa8` | [12-let-s-look-at-our-plan-and-prior-researc](./quick/12-let-s-look-at-our-plan-and-prior-researc/) |
+| 13 | (undocumented — session between 12 and 14) | - | - | - |
+| 14 | Update all planning docs to reflect post-Phase-8 reality + agent workspace audit | 2026-03-05 | TBD | [14-update-the-overall-plan-to-follow-that-l](./quick/14-update-the-overall-plan-to-follow-that-l/) |
 
 ### Blockers/Concerns
 
-**Phase 1:** COMPLETE
-**Phase 2:** COMPLETE
-**Phase 3:** COMPLETE
+**All phases: COMPLETE**
 
-**Phase 6 (Agent Orchestration — PLANNED):**
-- Plans written: 06-01 (task router), 06-02 (sub-agent memory isolation), 06-03 (NOVA filter + session types)
-- Architecture research done: claudedocs/openclaw-agent-memory-architecture.md
-- Not yet executed
-
-**Phase 4 (PARTIAL — infrastructure deployed, hooks still blocked):**
-- `message:received` hook event still NOT IMPLEMENTED in 2026.2.15 — workaround via catch-up cron
-- Now running OpenClaw 2026.2.15 (scope bug #16820 fixed)
-- Matrix plugin has missing dep `@vector-im/matrix-bot-sdk` — upstream issue in 2026.2.15
-- NOVA Memory infrastructure deployed: PostgreSQL + pgvector (66 tables), 3 hooks installed, postgres.json generated
-- Catch-up cron workaround active (every 5 min) for memory extraction
-- If persistent permission issues arise, fallback plan: revert to running as root
-
-### Lessons Learned (Gosu Migration)
-
-- Switching from root to non-root user requires chowning ALL persistent volume directories — files created by previous root-based runs are owned by root.
-- `gosu` preserves ENV (no PAM reset), solving the PATH loss from `su openclaw`.
-- `set -eE` + ERR trap is invaluable for debugging silent bash failures — shows exact line number.
-- NOVA memory v2.1 changed to require `~/.openclaw/postgres.json` config file instead of PGHOST/PGPORT env vars.
-- Coolify generates `command: ["bash", "/app/scripts/bootstrap.sh"]` which becomes args to ENTRYPOINT — entrypoint.sh ignores these args (uses exec gosu).
-- `crontab -` as non-root user may trigger ERR trap but is non-fatal inside conditional blocks.
-- Recursive chown of large dirs on HDD causes stalls — use non-recursive for top-level, recursive only for small dirs.
+**Active operational concerns:**
+- WhatsApp health monitor hitting 3/hr restart rate limit — investigate if WhatsApp is needed or disable (not part of any planned phase, likely leftover from early exploration)
+- n8n Global Error Handler: active but routing to TBD destination — verify it reaches main agent correctly
 
 ## Session Continuity
 
-Last session: 2026-02-23 — Executed 08-01 (Director Workforce Foundation). 4 tasks complete: bootstrap.sh patched (automation-supervisor + extraPaths), add-director.sh created, SOUL.md/HEARTBEAT.md/COMPANY_MEMORY.md/weekly-cron created, n8n-project scaffold created. 4 commits, 9 files. Open questions documented in 08-01-SUMMARY.md.
-Stopped at: Completed 08-01-PLAN.md
-Resume at: 08-02 (self-healing n8n error trigger workflow)
+Last session: 2026-03-05 — Quick task 14: Updated ROADMAP.md, STATE.md, ARCHITECTURE_PLAN.md, ARCHITECTURE_REFINEMENT.md to reflect post-Phase-8 reality. Conducted agent workspace audit via SSH. Confirmed automation-supervisor retired, main agent running lead screening every 30 min, 3 new skills built autonomously.
+Stopped at: Planning docs updated. All commits pushed.
+Resume at: No active work. Next work is on-demand — check with Ameer on priorities.
 
 ### Key Details
-- Container: `openclaw-ukwkggw4o8go0wgg804oc4oo-185052814424`
+- Container: `openclaw-ukwkggw4o8go0wgg804oc4oo-203702516523` (as of 2026-03-05; changes on redeploy)
 - App UUID: `ukwkggw4o8go0wgg804oc4oo`
 - Server LAN IP: 192.168.1.100
 - Gateway URL: http://192.168.1.100:18789
-- Gateway token: `b934d627a0dcc6a08c4e7a156067f865e54dba925beb0047`
-- OpenClaw version: 2026.2.17 (upgraded from 2026.2.15). 2026.2.19 available — security fix (path containment), upgrade recommended.
+- Tailscale URL: https://openclaw-server.tailad0efc.ts.net/
+- Gateway token: `b0397f99db9ce994e4067d0c92acab229442e36fea02352f799f24ba607214f7`
+- OpenClaw version: 2026.3.2 (latest as of 2026-03-05)
 - Matrix homeserver: https://matrix.aakashe.org
 - Bot Matrix ID: @bot:matrix.aakashe.org
 - Bot device ID: LAXYMRZYNG
@@ -216,6 +236,13 @@ Resume at: 08-02 (self-healing n8n error trigger workflow)
 - `a85e29d` — n8n-manager SKILL.md and n8n-api.sh base wrapper
 - `a8679b2` — Action scripts: list, create, execute, activate workflows
 
+### Key Commits (Post-Phase 8 Simplifications)
+- `7406d8a` — Retire automation-supervisor, add n8n TOOLS.md to main agent
+- `328fb1a` — Switch main agent workspace files to seed-once mode
+- `3fb579c` — Remove all workspace file seeding
+- `ee32594` — Deny gateway tool globally, restrict analyst Directors
+- `903d625` — Upgrade OpenClaw to 2026.3.2
+
 ---
 *State initialized: 2026-02-14*
-*Last updated: 2026-02-20 (Phase 6 plans created, ACIP installed)*
+*Last updated: 2026-03-05 — All phases complete, post-Phase-8 simplifications documented, agent workspace audited*
