@@ -1,7 +1,7 @@
 # OpenClaw-Coolify Security Hardening
 
 ## Project Overview
-Forked from `essamamdani/openclaw-coolify`. This fork applies security hardening to address critical vulnerabilities identified in a comprehensive security audit.
+Standalone repo (previously forked from `essamamdani/openclaw-coolify`, now unlinked). Applies security hardening and custom features on top of the OpenClaw platform.
 
 **Deployment target**: Coolify self-hosted
 
