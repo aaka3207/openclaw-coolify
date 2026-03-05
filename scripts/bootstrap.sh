@@ -444,7 +444,7 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
       if [ -z "$ANALYST_HAS_DENY" ]; then
         jq --arg id "$analyst_id" '
           (.agents.list[] | select(.id == $id) | .tools) |= (. // {}) |
-          (.agents.list[] | select(.id == $id) | .tools.deny) |= (. // []) + ["exec","write","edit","apply_patch"] | unique
+          (.agents.list[] | select(.id == $id) | .tools.deny) |= ((. // []) + ["exec","write","edit","apply_patch"] | unique)
         ' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
         echo "[config] Restricted $analyst_id: denied exec, write, edit, apply_patch"
       fi
