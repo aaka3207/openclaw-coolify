@@ -76,6 +76,15 @@ done
 # Ensure workspace directory exists
 mkdir -p "${OPENCLAW_WORKSPACE:-/data/openclaw-workspace}"
 
+# Force-sync source-of-truth behavioral config files from repo to workspace on every boot.
+# These are Ameer-edited files that must always reflect the repo (not seed-once).
+for _src_file in SOUL.md AGENTS.md TOOLS.md; do
+  if [ -f "/app/$_src_file" ]; then
+    cp "/app/$_src_file" "${OPENCLAW_WORKSPACE:-/data/openclaw-workspace}/$_src_file"
+  fi
+done
+echo "[bootstrap] Synced behavioral config to workspace (SOUL.md, AGENTS.md, TOOLS.md)"
+
 # ----------------------------
 # Resolve Hooks Token (BWS-managed or auto-generated)
 # ----------------------------
