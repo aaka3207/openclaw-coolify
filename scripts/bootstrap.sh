@@ -299,13 +299,13 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   SUBAGENT_MODEL=$(jq -r '.agents.defaults.subagents.model.primary // empty' "$CONFIG_FILE" 2>/dev/null)
   if [ -z "$SUBAGENT_MODEL" ]; then
     jq '.agents.defaults.subagents = {
-      "model": {"primary": "openrouter/google/gemini-3-flash-preview"},
+      "model": {"primary": "openrouter/minimax/minimax-m2.7"},
       "maxSpawnDepth": 2,
       "maxChildrenPerAgent": 5,
       "maxConcurrent": 8,
       "archiveAfterMinutes": 60
     }' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Seeded sub-agent model to openrouter/google/gemini-3-flash-preview"
+    echo "[config] Seeded sub-agent model to openrouter/minimax/minimax-m2.7"
   fi
   # Seed-once: heartbeat model (only if empty — agent manages after first boot)
   HEARTBEAT_MODEL=$(jq -r '.agents.defaults.heartbeat.model // empty' "$CONFIG_FILE" 2>/dev/null)
@@ -317,19 +317,19 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   # Patch: image/vision model (must be object with primary key)
   IMAGE_MODEL=$(jq -r '.agents.defaults.imageModel.primary // empty' "$CONFIG_FILE" 2>/dev/null)
   if [ -z "$IMAGE_MODEL" ]; then
-    jq '.agents.defaults.imageModel = {"primary": "openrouter/google/gemini-3-flash-preview"}' \
+    jq '.agents.defaults.imageModel = {"primary": "openrouter/google/gemini-3-pro-image-preview"}' \
       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Set image model to openrouter/google/gemini-3-flash-preview"
+    echo "[config] Set image model to openrouter/google/gemini-3-pro-image-preview"
   fi
   # Seed-once: fallback models (only if missing/null — agent manages after first boot)
   FALLBACKS_EXISTS=$(jq -r '.agents.defaults.model.fallbacks // empty' "$CONFIG_FILE" 2>/dev/null)
   if [ -z "$FALLBACKS_EXISTS" ]; then
     jq '.agents.defaults.model.fallbacks = [
       "openrouter/anthropic/claude-sonnet-4-5",
-      "openrouter/google/gemini-3-flash-preview",
+      "openrouter/minimax/minimax-m2.7",
       "openrouter/auto"
     ]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Seeded model fallbacks (sonnet → gemini-3-flash-preview → auto)"
+    echo "[config] Seeded model fallbacks (sonnet → minimax-m2.7 → auto)"
   fi
   # Patch: ensure Tailscale subnet 100.64.0.0/10 is in trustedProxies (Phase 7 — for MacBook access)
   HAS_TS_PROXY=$(jq -r '.gateway.trustedProxies // [] | index("100.64.0.0/10") // empty' "$CONFIG_FILE" 2>/dev/null)
@@ -356,7 +356,7 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   # Fix: for each agent with a string model field, convert to {"primary": <string>} object form.
   jq '(.agents.list // []) |= map(
     if (.model | type) == "string" then
-      .model = {"primary": .model, "fallbacks": ["openrouter/google/gemini-3-flash-preview", "openrouter/auto"]}
+      .model = {"primary": .model, "fallbacks": ["openrouter/minimax/minimax-m2.7", "openrouter/auto"]}
     else
       .
     end
@@ -388,7 +388,7 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   if [ "${MODELS_COUNT:-0}" -eq 0 ]; then
     jq '
       .agents.defaults.models["openrouter/google/gemini-3.1-pro-preview"] = {"alias": "gemini-3.1-pro-preview"} |
-      .agents.defaults.models["openrouter/google/gemini-3-flash-preview"] = {"alias": "gemini-3-flash-preview"} |
+      .agents.defaults.models["openrouter/minimax/minimax-m2.7"] = {"alias": "minimax-m2.7"} |
       .agents.defaults.models["openrouter/anthropic/claude-haiku-4-5"] = {"alias": "claude-haiku-4-5"} |
       .agents.defaults.models["openrouter/anthropic/claude-sonnet-4.6"] = {"alias": "claude-sonnet-4.6"} |
       .agents.defaults.models["openrouter/openai/gpt-5.2"] = {"alias": "gpt-5.2"} |
@@ -421,7 +421,7 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
             "userId": $uid,
             "password": $pw,
             "groupPolicy": "disabled",
-            "dm": {"policy": "pairing"},
+            "dm": {"policy": "allowlist", "allowFrom": ["@ameer:matrix.aakashe.org"]},
             "encryption": true,
             "markdown": {"tables": "bullets"},
             "chunkMode": "newline"
