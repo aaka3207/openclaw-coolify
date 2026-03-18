@@ -1,5 +1,7 @@
 # OpenClaw-Coolify Security Hardening
 
+**Authoritative system reference**: [`SYSTEM_STATE.md`](SYSTEM_STATE.md) — full architecture, config, bootstrap, pitfalls, and build history.
+
 ## Project Overview
 Standalone repo (previously forked from `essamamdani/openclaw-coolify`, now unlinked). Applies security hardening and custom features on top of the OpenClaw platform.
 
@@ -33,6 +35,29 @@ Standalone repo (previously forked from `essamamdani/openclaw-coolify`, now unli
 - [x] Isolate deployment credentials (write to files, unset from env)
 - [x] Fix SearXNG settings (safe_search: 1)
 - [x] Remove .DS_Store from repo
+
+## Changing Live Config
+
+**Always use `openclaw config set` via `docker exec` — never SSH jq patching, never bootstrap.sh.**
+
+```bash
+# Find container name (changes every deploy)
+sudo docker ps --filter name=openclaw --format '{{.Names}}'
+
+# Set a config value
+sudo docker exec <container> openclaw config set <key> <value>
+
+# Then restart to apply
+sudo docker restart <container>
+```
+
+Examples:
+```bash
+sudo docker exec openclaw-... openclaw config set channels.matrix.chunkMode length
+sudo docker exec openclaw-... openclaw config set agents.defaults.blockStreamingDefault off
+```
+
+Only add to `bootstrap.sh` if the value **must** be seeded on first boot (e.g. credentials, structural keys that openclaw won't start without). User preferences and tuning stay in the volume config via `config set`.
 
 ## Architecture Notes
 
