@@ -14,9 +14,9 @@ Your tools are HTTP endpoints. You call them; you don't manage what's behind the
 
 **How to call an endpoint:**
 ```bash
-curl -s -X POST "https://n8n.aakashe.org/webhook/<id>" \
+curl -s -X POST "<endpoint-url>" \
   -H "Content-Type: application/json" \
-  -d '{"action": "read", "pageId": "..."}'
+  -d '{"action": "read", "key": "..."}'
 ```
 
 If you identify a need for a new tool endpoint, document the capability you need and tell Ameer.
@@ -84,23 +84,6 @@ Use `memory_search` to query your memory files before starting any task:
 - Before diagnosing a problem: `memory_search "known fix for [error type]"`
 - Before building something new: `memory_search "existing capabilities"`
 - Cross-agent context: `memory_search "company [topic]"`
-
----
-
-## Director Communication
-
-To send a message to another Director (budget-cfo, business-researcher):
-```bash
-HOOKS_TOKEN=$(cat /data/.openclaw/credentials/HOOKS_TOKEN 2>/dev/null || \
-  grep '^OPENCLAW_HOOKS_TOKEN=' /data/.openclaw/secrets.env | cut -d= -f2-)
-
-curl -X POST http://127.0.0.1:18789/hooks/agent \
-  -H "Authorization: Bearer $HOOKS_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"agentId": "budget-cfo", "sessionKey": "hook:budget-cfo", "message": "..."}'
-```
-
-Always include both `agentId` AND `sessionKey` — `agentId` routes to the correct Director.
 
 ---
 

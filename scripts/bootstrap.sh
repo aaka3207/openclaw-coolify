@@ -76,14 +76,13 @@ done
 # Ensure workspace directory exists
 mkdir -p "${OPENCLAW_WORKSPACE:-/data/openclaw-workspace}"
 
-# Force-sync source-of-truth behavioral config files from repo to workspace on every boot.
-# These are Ameer-edited files that must always reflect the repo (not seed-once).
+# Seed behavioral files only if missing (agent manages these on volume after first boot)
 for _src_file in SOUL.md AGENTS.md TOOLS.md; do
-  if [ -f "/app/$_src_file" ]; then
+  if [ -f "/app/$_src_file" ] && [ ! -f "${OPENCLAW_WORKSPACE:-/data/openclaw-workspace}/$_src_file" ]; then
     cp "/app/$_src_file" "${OPENCLAW_WORKSPACE:-/data/openclaw-workspace}/$_src_file"
+    echo "[bootstrap] Seeded $_src_file to workspace (first boot)"
   fi
 done
-echo "[bootstrap] Synced behavioral config to workspace (SOUL.md, AGENTS.md, TOOLS.md)"
 
 # ----------------------------
 # Resolve Hooks Token (BWS-managed or auto-generated)
@@ -250,14 +249,11 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     jq --arg t "$PATCH_HOOKS_TOKEN" '.hooks.enabled = true | .hooks.token = $t | .hooks.allowRequestSessionKey = true | .hooks.allowedSessionKeyPrefixes = ["hook:"]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Enabled hooks with token support"
   fi
-  # Patch: enable built-in memorySearch with Gemini embeddings (free, hybrid BM25+vector)
-  # Force-update if provider != gemini OR remote.apiKey is missing.
+  # Seed-once: memorySearch config (only if provider is empty — agent manages after first boot)
   # CRITICAL: remote.apiKey must be set explicitly — GEMINI_API_KEY env var alone is NOT picked up by the plugin.
-  # Read from secrets.env directly — BWS injection runs after this block so env var is not yet populated.
   GEMINI_KEY="${GEMINI_API_KEY:-$(grep '^GEMINI_API_KEY=' /data/.openclaw/secrets.env 2>/dev/null | cut -d= -f2- || true)}"
   MEMORY_PROVIDER=$(jq -r '.agents.defaults.memorySearch.provider // empty' "$CONFIG_FILE" 2>/dev/null)
-  MEMORY_APIKEY=$(jq -r '.agents.defaults.memorySearch.remote.apiKey // empty' "$CONFIG_FILE" 2>/dev/null)
-  if [ "$MEMORY_PROVIDER" != "gemini" ] || [ -z "$MEMORY_APIKEY" ]; then
+  if [ -z "$MEMORY_PROVIDER" ]; then
     jq --arg apikey "${GEMINI_KEY}" '.agents.defaults.memorySearch = {
       "enabled": true,
       "provider": "gemini",
@@ -278,7 +274,12 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
         }
       }
     }' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Set memorySearch provider=gemini/gemini-embedding-001 with remote.apiKey"
+    echo "[config] Seeded memorySearch provider=gemini/gemini-embedding-001"
+  fi
+  # Always: refresh memorySearch apiKey from secrets.env (credential rotation support)
+  if [ -n "$GEMINI_KEY" ]; then
+    jq --arg apikey "${GEMINI_KEY}" '.agents.defaults.memorySearch.remote.apiKey = $apikey' \
+      "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
   fi
   # Patch: enable memory_search + memory_get via tools.alsoAllow (additive).
   # Cannot use tools.allow — openclaw rejects allow+alsoAllow together, and allow with unknown
@@ -294,10 +295,9 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Added group:memory to tools.alsoAllow (memory_search + memory_get)"
   fi
-  # Patch: set sub-agent model defaults (gemini-3-flash-preview — fast + cheap)
-  # Force-update if unset or still on old haiku value
+  # Seed-once: sub-agent model defaults (only if empty — agent manages after first boot)
   SUBAGENT_MODEL=$(jq -r '.agents.defaults.subagents.model.primary // empty' "$CONFIG_FILE" 2>/dev/null)
-  if [ -z "$SUBAGENT_MODEL" ] || [ "$SUBAGENT_MODEL" = "anthropic/claude-haiku-4-5" ] || [ "$SUBAGENT_MODEL" = "openrouter/anthropic/claude-haiku-4-5" ]; then
+  if [ -z "$SUBAGENT_MODEL" ]; then
     jq '.agents.defaults.subagents = {
       "model": {"primary": "openrouter/google/gemini-3-flash-preview"},
       "maxSpawnDepth": 2,
@@ -305,15 +305,14 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
       "maxConcurrent": 8,
       "archiveAfterMinutes": 60
     }' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Set sub-agent model to openrouter/google/gemini-3-flash-preview"
+    echo "[config] Seeded sub-agent model to openrouter/google/gemini-3-flash-preview"
   fi
-  # Patch: heartbeat model (gpt-5-nano — cheapest capable model for keepalives)
-  # Force-update if unset or still on old haiku value
+  # Seed-once: heartbeat model (only if empty — agent manages after first boot)
   HEARTBEAT_MODEL=$(jq -r '.agents.defaults.heartbeat.model // empty' "$CONFIG_FILE" 2>/dev/null)
-  if [ -z "$HEARTBEAT_MODEL" ] || [ "$HEARTBEAT_MODEL" = "openrouter/anthropic/claude-haiku-4-5" ]; then
+  if [ -z "$HEARTBEAT_MODEL" ]; then
     jq '.agents.defaults.heartbeat.model = "openrouter/openai/gpt-5-nano"' \
       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Set heartbeat model to openrouter/openai/gpt-5-nano"
+    echo "[config] Seeded heartbeat model to openrouter/openai/gpt-5-nano"
   fi
   # Patch: image/vision model (must be object with primary key)
   IMAGE_MODEL=$(jq -r '.agents.defaults.imageModel.primary // empty' "$CONFIG_FILE" 2>/dev/null)
@@ -322,15 +321,15 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Set image model to openrouter/google/gemini-3-flash-preview"
   fi
-  # Patch: enrich fallback models (only if still using default single fallback)
-  FALLBACK_COUNT=$(jq -r '.agents.defaults.model.fallbacks | length' "$CONFIG_FILE" 2>/dev/null)
-  if [ "${FALLBACK_COUNT:-0}" -le 1 ]; then
+  # Seed-once: fallback models (only if missing/null — agent manages after first boot)
+  FALLBACKS_EXISTS=$(jq -r '.agents.defaults.model.fallbacks // empty' "$CONFIG_FILE" 2>/dev/null)
+  if [ -z "$FALLBACKS_EXISTS" ]; then
     jq '.agents.defaults.model.fallbacks = [
       "openrouter/anthropic/claude-sonnet-4-5",
       "openrouter/google/gemini-3-flash-preview",
       "openrouter/auto"
     ]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Updated model fallbacks (sonnet → gemini-3-flash-preview → auto)"
+    echo "[config] Seeded model fallbacks (sonnet → gemini-3-flash-preview → auto)"
   fi
   # Patch: ensure Tailscale subnet 100.64.0.0/10 is in trustedProxies (Phase 7 — for MacBook access)
   HAS_TS_PROXY=$(jq -r '.gateway.trustedProxies // [] | index("100.64.0.0/10") // empty' "$CONFIG_FILE" 2>/dev/null)
@@ -350,15 +349,6 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   if [ "$CURRENT_TS_MODE" != "serve" ]; then
     jq '.gateway.tailscale = {"mode": "serve", "resetOnExit": false}' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Set gateway.tailscale.mode=serve"
-  fi
-  # Cleanup: remove stale temp patches from volume config (Phase 7)
-  if jq -e '.gateway.mode == "remote"' "$CONFIG_FILE" &>/dev/null; then
-    jq '.gateway.mode = "local"' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Reverted gateway.mode from remote to local (temp patch removed)"
-  fi
-  if jq -e '.gateway.remote != null' "$CONFIG_FILE" &>/dev/null; then
-    jq 'del(.gateway.remote)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Removed gateway.remote (temp patch removed)"
   fi
   # Patch: fix agents.list model fields — convert string-form model refs to object form.
   # openclaw does not properly resolve a string model ref in agents.list when ANTHROPIC_API_KEY is
@@ -384,58 +374,30 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
   jq 'del(.agents.defaults.heartbeat.intervalMinutes) |
       (.agents.list // []) |= map(del(.heartbeat.intervalMinutes))' \
     "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-  # Cleanup: remove automation-supervisor Director (retired — n8n capabilities moved to main agent)
-  HAS_SUPERVISOR=$(jq -r '.agents.list[] | select(.id == "automation-supervisor") | .id' "$CONFIG_FILE" 2>/dev/null)
-  if [ -n "$HAS_SUPERVISOR" ]; then
-    jq '.agents.list |= map(select(.id != "automation-supervisor"))' \
-      "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Removed automation-supervisor from agents.list (retired)"
+  # Cleanup: remove retired Directors from agents.list (company automation paused)
+  for _retired_id in automation-supervisor budget-cfo business-researcher; do
+    if jq -e --arg id "$_retired_id" '.agents.list[] | select(.id == $id)' "$CONFIG_FILE" &>/dev/null; then
+      jq --arg id "$_retired_id" '.agents.list |= map(select(.id != $id))' \
+        "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+      echo "[config] Removed $_retired_id from agents.list (retired)"
+    fi
+  done
+
+  # Seed-once: model aliases (only if agents.defaults.models is null/empty)
+  MODELS_COUNT=$(jq -r '.agents.defaults.models // {} | length' "$CONFIG_FILE" 2>/dev/null)
+  if [ "${MODELS_COUNT:-0}" -eq 0 ]; then
+    jq '
+      .agents.defaults.models["openrouter/google/gemini-3.1-pro-preview"] = {"alias": "gemini-3.1-pro-preview"} |
+      .agents.defaults.models["openrouter/google/gemini-3-flash-preview"] = {"alias": "gemini-3-flash-preview"} |
+      .agents.defaults.models["openrouter/anthropic/claude-haiku-4-5"] = {"alias": "claude-haiku-4-5"} |
+      .agents.defaults.models["openrouter/anthropic/claude-sonnet-4.6"] = {"alias": "claude-sonnet-4.6"} |
+      .agents.defaults.models["openrouter/openai/gpt-5.2"] = {"alias": "gpt-5.2"} |
+      .agents.defaults.models["openrouter/minimax/minimax-m2.5"] = {"alias": "minimax-m2.5"} |
+      .agents.defaults.models["openrouter/openai/gpt-5-nano"] = {"alias": "gpt-5-nano"}
+    ' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    echo "[config] Seeded model aliases in agents.defaults.models"
   fi
 
-  # Cleanup: remove invalid contextWindow/maxTokens from model entries (written by broken patch c4cbc46)
-  # These fields are only valid for custom local providers (litellm/vllm/ollama), not OpenRouter entries.
-  if jq -e '.agents.defaults.models | to_entries[] | .value | has("contextWindow") or has("maxTokens")' "$CONFIG_FILE" &>/dev/null 2>&1; then
-    jq '.agents.defaults.models |= with_entries(.value |= del(.contextWindow, .maxTokens))' \
-      "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Removed invalid contextWindow/maxTokens from agents.defaults.models entries"
-  fi
-  # Patch: set model aliases in agents.defaults.models (alias only — display name in CLI/UI)
-  jq '
-    .agents.defaults.models["openrouter/google/gemini-3.1-pro-preview"] //= {} |
-    .agents.defaults.models["openrouter/google/gemini-3.1-pro-preview"].alias = "gemini-3.1-pro-preview" |
-
-    .agents.defaults.models["openrouter/google/gemini-3-flash-preview"] //= {} |
-    .agents.defaults.models["openrouter/google/gemini-3-flash-preview"].alias = "gemini-3-flash-preview" |
-
-    .agents.defaults.models["openrouter/anthropic/claude-haiku-4-5"] //= {} |
-    .agents.defaults.models["openrouter/anthropic/claude-haiku-4-5"].alias = "claude-haiku-4-5" |
-
-    .agents.defaults.models["openrouter/anthropic/claude-sonnet-4.6"] //= {} |
-    .agents.defaults.models["openrouter/anthropic/claude-sonnet-4.6"].alias = "claude-sonnet-4.6" |
-
-    .agents.defaults.models["openrouter/openai/gpt-5.2"] //= {} |
-    .agents.defaults.models["openrouter/openai/gpt-5.2"].alias = "gpt-5.2" |
-
-    .agents.defaults.models["openrouter/minimax/minimax-m2.5"] //= {} |
-    .agents.defaults.models["openrouter/minimax/minimax-m2.5"].alias = "minimax-m2.5" |
-
-    .agents.defaults.models["openrouter/openai/gpt-5-nano"] //= {} |
-    .agents.defaults.models["openrouter/openai/gpt-5-nano"].alias = "gpt-5-nano"
-  ' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-  echo "[config] Set model aliases in agents.defaults.models"
-
-  # Patch: add COMPANY_MEMORY.md to agents.defaults.memorySearch.extraPaths
-  # Per ARCHITECTURE_REFINEMENT.md Section 4 — one patch makes it searchable by ALL agents
-  COMPANY_MEM_PATH="${WORKSPACE_DIR}/COMPANY_MEMORY.md"
-  HAS_COMPANY_PATH=$(jq -r --arg p "$COMPANY_MEM_PATH" \
-    '.agents.defaults.memorySearch.extraPaths // [] | index($p) // empty' \
-    "$CONFIG_FILE" 2>/dev/null)
-  if [ -z "$HAS_COMPANY_PATH" ]; then
-    jq --arg p "$COMPANY_MEM_PATH" \
-       '.agents.defaults.memorySearch.extraPaths = ((.agents.defaults.memorySearch.extraPaths // []) + [$p] | unique)' \
-       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    echo "[config] Added COMPANY_MEMORY.md to agents.defaults.memorySearch.extraPaths"
-  fi
   # Patch: deny gateway tool globally — prevents any agent from patching config via gateway tool
   # (chmod 444 on openclaw.json covers file writes; this covers config.apply/config.patch via gateway process)
   HAS_GATEWAY_DENY=$(jq -r '.tools.deny // [] | index("gateway") // empty' "$CONFIG_FILE" 2>/dev/null)
@@ -444,23 +406,6 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Added gateway to tools.deny (prevents config.apply/patch via agent)"
   fi
-  # Patch: restrict analyst Directors (budget-cfo, business-researcher) — deny exec/write/edit/apply_patch
-  # These agents are read+communicate only; they have no reason to run shell commands or write files.
-  for analyst_id in budget-cfo business-researcher; do
-    HAS_ANALYST=$(jq -r --arg id "$analyst_id" '.agents.list[] | select(.id == $id) | .id' "$CONFIG_FILE" 2>/dev/null)
-    if [ -n "$HAS_ANALYST" ]; then
-      ANALYST_HAS_DENY=$(jq -r --arg id "$analyst_id" \
-        '.agents.list[] | select(.id == $id) | .tools.deny // [] | index("exec") // empty' \
-        "$CONFIG_FILE" 2>/dev/null)
-      if [ -z "$ANALYST_HAS_DENY" ]; then
-        jq --arg id "$analyst_id" '
-          (.agents.list[] | select(.id == $id) | .tools) |= (. // {}) |
-          (.agents.list[] | select(.id == $id) | .tools.deny) |= ((. // []) + ["exec","write","edit","apply_patch"] | unique)
-        ' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-        echo "[config] Restricted $analyst_id: denied exec, write, edit, apply_patch"
-      fi
-    fi
-  done
   # Patch: Matrix channel config (Phase 2) — uses env vars from Coolify
   # Only patch if MATRIX_HOMESERVER and MATRIX_PASSWORD are set and channel not yet configured
   if [ -n "${MATRIX_HOMESERVER:-}" ] && [ -n "${MATRIX_PASSWORD:-}" ]; then
@@ -515,7 +460,7 @@ export OPENCLAW_STATE_DIR="$OPENCLAW_STATE"
 # ----------------------------
 # System services
 # ----------------------------
-# Start cron daemon for periodic tasks (BWS refresh, NOVA catch-up)
+# Start cron daemon for periodic tasks (BWS refresh)
 /usr/sbin/cron 2>/dev/null || true
 
 # Matrix plugin: install fixed copy to persistent volume (runs once, survives deploys)
@@ -581,16 +526,6 @@ if [ -n "${BWS_ACCESS_TOKEN:-}" ] && command -v bws &>/dev/null; then
   echo "[bws] cron refresh enabled (every 5 min)"
 fi
 
-# Write BWS-sourced credentials to files (not available during early credential isolation)
-for var in N8N_API_KEY; do
-    if [ -n "${!var:-}" ]; then
-        printf '%s' "${!var}" > "$CRED_DIR/$var"
-        chmod 600 "$CRED_DIR/$var"
-        echo "[credentials] wrote BWS-sourced $var to credential file"
-        unset "$var"
-    fi
-done
-
 # Claude Code CLI: disable auto-updater on server (prevents version drift)
 # Auth is via subscription OAuth stored in /data/.claude/ — no API key needed
 CLAUDE_DIR="/data/.claude"
@@ -601,109 +536,36 @@ if ! grep -q "DISABLE_AUTOUPDATER" "$CLAUDE_SETTINGS_ENV" 2>/dev/null; then
   echo "[claude] Wrote DISABLE_AUTOUPDATER=1 to $CLAUDE_SETTINGS_ENV"
 fi
 
+
 # ----------------------------
-# NOVA Memory Installation
+# One-time workspace cleanup (runs once, sentinel prevents re-run)
 # ----------------------------
-# Set NOVA_MEMORY_ENABLED=true in Coolify to enable.
-# Currently disabled: message:received hook not implemented in OpenClaw through 2026.2.15.
-# Data was being extracted but never recalled — semantic-recall hook can't fire.
-# Re-enable when OpenClaw ships message:received (GitHub issue #8807).
-if [ "${NOVA_MEMORY_ENABLED:-false}" = "true" ] && [ -n "${NOVA_MEMORY_DB_HOST:-}" ]; then
-  echo "[nova] NOVA Memory enabled, waiting for PostgreSQL..."
-  PG_READY=false
-  for i in $(seq 1 30); do
-    if (echo > /dev/tcp/${NOVA_MEMORY_DB_HOST}/${NOVA_MEMORY_DB_PORT}) 2>/dev/null; then
-      echo "[nova] PostgreSQL ready"
-      PG_READY=true
-      break
+CLEANUP_SENTINEL="/data/.openclaw/.reboot-cleanup-done"
+if [ ! -f "$CLEANUP_SENTINEL" ]; then
+  echo "[cleanup] Running one-time workspace cleanup..."
+  ARCHIVE_DIR="/data/openclaw-workspace.pre-reboot"
+  mkdir -p "$ARCHIVE_DIR"
+
+  # Archive stale workspace directories
+  for _dir in agents leads projects tools cron docs scripts state backups config; do
+    if [ -d "$WORKSPACE_DIR/$_dir" ]; then
+      mv "$WORKSPACE_DIR/$_dir" "$ARCHIVE_DIR/$_dir" 2>/dev/null || true
+      echo "[cleanup] Archived $WORKSPACE_DIR/$_dir"
     fi
-    sleep 2
   done
-  if [ "$PG_READY" = "false" ]; then
-    echo "[nova] ERROR: PostgreSQL not ready after 30 attempts, skipping NOVA Memory"
-  fi
 
-  if [ "$PG_READY" = "true" ]; then
-    # Clone or update NOVA Memory to persistent volume
-    NOVA_DIR="/data/clawd/nova-memory"
-    if [ ! -d "$NOVA_DIR/.git" ]; then
-      mkdir -p /data/clawd
-      git clone https://github.com/NOVA-Openclaw/nova-memory.git "$NOVA_DIR" 2>/dev/null || echo "[nova] WARNING: git clone failed"
-      echo "[nova] Cloned NOVA Memory"
-    else
-      cd "$NOVA_DIR" && git pull --rebase 2>/dev/null || true
-      echo "[nova] Updated NOVA Memory"
-    fi
+  # Remove stale root files (keep core OpenClaw files)
+  for _file in COMPANY_MEMORY.md ARCHITECTURE_PLAN.md BOOTSTRAP.md n8n_WORKFLOW_REGISTRY.md SECURITY.local.md; do
+    rm -f "$WORKSPACE_DIR/$_file" 2>/dev/null
+  done
+  # Remove backup/log artifacts
+  rm -f "$WORKSPACE_DIR"/SOUL.md.backup.* "$WORKSPACE_DIR"/HEARTBEAT.md.bak.* 2>/dev/null
+  rm -f "$WORKSPACE_DIR"/monitor.log "$WORKSPACE_DIR"/recovery.log "$WORKSPACE_DIR"/subagent-poll.log 2>/dev/null
+  rm -f "$WORKSPACE_DIR"/last_id.txt "$WORKSPACE_DIR"/quick_id.txt "$WORKSPACE_DIR"/spoke_id.txt 2>/dev/null
 
-    # Clone or update NOVA Relationships (semantic-recall hook depends on /data/nova-relationships/)
-    NOVA_REL_DIR="/data/nova-relationships"
-    if [ ! -d "$NOVA_REL_DIR/.git" ]; then
-      git clone https://github.com/NOVA-Openclaw/nova-relationships.git "$NOVA_REL_DIR" 2>/dev/null || echo "[nova] WARNING: nova-relationships clone failed"
-      echo "[nova] Cloned NOVA Relationships"
-    else
-      cd "$NOVA_REL_DIR" && git pull --rebase 2>/dev/null || true
-      echo "[nova] Updated NOVA Relationships"
-    fi
-    # Install nova-relationships entity-resolver deps (semantic-recall needs 'pg' package)
-    if [ -f "$NOVA_REL_DIR/lib/entity-resolver/package.json" ]; then
-      cd "$NOVA_REL_DIR/lib/entity-resolver" && npm install --omit=dev --quiet 2>/dev/null && echo "[nova] Entity-resolver deps installed" || echo "[nova] WARNING: Entity-resolver deps install failed"
-    fi
-
-    # Ensure directories agent-install.sh needs are writable
-    mkdir -p /data/.local/share/nova 2>/dev/null || true
-
-    # Install Python deps for NOVA hooks (idempotent, fast if already installed)
-    pip3 install --quiet --break-system-packages psycopg2-binary anthropic openai 2>/dev/null && echo "[nova] Python deps installed" || echo "[nova] WARNING: Python deps install failed"
-
-    # Run agent-install.sh with PG environment variables set (idempotent)
-    cd "$NOVA_DIR" || { echo "[nova] WARNING: NOVA directory not found"; }
-    if [ -d "$NOVA_DIR" ]; then
-      export PGHOST="${NOVA_MEMORY_DB_HOST}"
-      export PGPORT="${NOVA_MEMORY_DB_PORT}"
-      export PGUSER="${NOVA_MEMORY_DB_USER}"
-      export PGPASSWORD="${NOVA_MEMORY_DB_PASSWORD}"
-      export PGDATABASE="${NOVA_MEMORY_DB_NAME}"
-
-      # Generate postgres.json (required by nova-memory v2.1+)
-      PG_JSON="${HOME}/.openclaw/postgres.json"
-      mkdir -p "$(dirname "$PG_JSON")"
-      cat > "$PG_JSON" <<PGJSON
-{"host":"${NOVA_MEMORY_DB_HOST}","port":${NOVA_MEMORY_DB_PORT},"database":"${NOVA_MEMORY_DB_NAME}","user":"${NOVA_MEMORY_DB_USER}","password":"${NOVA_MEMORY_DB_PASSWORD}"}
-PGJSON
-      chmod 600 "$PG_JSON"
-      echo "[nova] Generated postgres.json"
-
-      if [ -x "./agent-install.sh" ]; then
-        ./agent-install.sh && echo "[nova] Schema applied" || echo "[nova] WARNING: agent-install.sh failed"
-      else
-        echo "[nova] WARNING: agent-install.sh not found or not executable"
-      fi
-      # Ensure hooks.token exists if agent-install.sh enabled hooks
-      # (gateway crashes with "hooks.enabled requires hooks.token" otherwise)
-      if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
-        HOOKS_ENABLED=$(jq -r '.hooks.enabled // false' "$CONFIG_FILE" 2>/dev/null)
-        HOOKS_TOKEN=$(jq -r '.hooks.token // empty' "$CONFIG_FILE" 2>/dev/null)
-        if [ "$HOOKS_ENABLED" = "true" ] && [ -z "$HOOKS_TOKEN" ]; then
-          HOOKS_TOKEN=$(openssl rand -hex 24 2>/dev/null || node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")
-          jq --arg t "$HOOKS_TOKEN" '.hooks.token = $t | .hooks.path = (.hooks.path // "/hooks") | .hooks.defaultSessionKey = (.hooks.defaultSessionKey // "hook:ingress")' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-          echo "[nova] Patched hooks.token into config"
-        fi
-      fi
-    fi
-
-    # Symlink nova-relationships into .openclaw for hook import paths
-    if [ -d "$NOVA_REL_DIR" ] && [ ! -L "/data/.openclaw/nova-relationships" ]; then
-      ln -sf "$NOVA_REL_DIR" /data/.openclaw/nova-relationships
-      echo "[nova] Symlinked nova-relationships"
-    fi
-
-    # Memory catch-up processor — DISABLED: using built-in memorySearch instead of NOVA hooks
-    # Legacy cron removed 2026-02-21. To clean stale entries: crontab -l | grep -v memory-catchup | crontab -
-  fi
-else
-  echo "[nova] NOVA Memory disabled (set NOVA_MEMORY_ENABLED=true to enable — waiting for issue #8807)"
+  touch "$CLEANUP_SENTINEL"
+  echo "[cleanup] One-time workspace cleanup complete (sentinel: $CLEANUP_SENTINEL)"
 fi
-# --- End NOVA Memory Installation ---
 
 # ----------------------------
 # Run OpenClaw

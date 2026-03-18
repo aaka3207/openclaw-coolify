@@ -113,7 +113,7 @@ RUN pip3 install --break-system-packages \
 
 # cron + postgresql-client + BWS CLI (cached here to avoid rebuilding on every code change)
 ARG BWS_VERSION=1.0.0
-RUN apt-get update && apt-get install -y --no-install-recommends cron postgresql-client tmux && rm -rf /var/lib/apt/lists/* && \
+RUN apt-get update && apt-get install -y --no-install-recommends cron tmux && rm -rf /var/lib/apt/lists/* && \
     BWS_ARCH=$(dpkg --print-architecture) && \
     if [ "$BWS_ARCH" = "amd64" ]; then BWS_ARCH="x86_64"; fi && \
     curl -fsSL "https://github.com/bitwarden/sdk-sm/releases/download/bws-v${BWS_VERSION}/bws-${BWS_ARCH}-unknown-linux-gnu-${BWS_VERSION}.zip" -o /tmp/bws.zip && \
@@ -129,9 +129,19 @@ RUN --mount=type=cache,target=/data/.bun/install/cache \
     npm install -g tsx && \
     mkdir -p /app/node_modules && ln -sf /usr/local/lib/node_modules/tsx /app/node_modules/tsx
 
-# Stage 3: OpenClaw + MCP tools (thin layer — only rebuilds when versions change)
-# Separated from browser-deps so upgrading openclaw doesn't rebuild chromium/Go/pip (~15 min saved)
-FROM browser-deps AS openclaw-install
+# Stage 3: Tailscale binaries (cached — only rebuilds when version changes)
+# Binary copy pattern from tailscale.com/kb/1107/heroku — no APT repo needed
+# Placed before openclaw-install so bumping openclaw version doesn't bust this layer
+FROM browser-deps AS tailscale-install
+
+ARG TAILSCALE_VERSION=1.94.2
+COPY --from=docker.io/tailscale/tailscale:v1.94.2 /usr/local/bin/tailscaled /usr/local/bin/tailscaled
+COPY --from=docker.io/tailscale/tailscale:v1.94.2 /usr/local/bin/tailscale /usr/local/bin/tailscale
+RUN mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale
+
+# Stage 3.5: OpenClaw + MCP tools (thin layer — only rebuilds when versions change)
+# After tailscale so bumping openclaw doesn't bust tailscale layer cache (~2 min saved)
+FROM tailscale-install AS openclaw-install
 
 ARG OPENCLAW_BETA=false
 ENV OPENCLAW_BETA=${OPENCLAW_BETA} \
@@ -151,17 +161,8 @@ RUN --mount=type=cache,target=/data/.npm \
     exit 1; \
     fi
 
-# Stage 3.5: Tailscale binaries (cached — only rebuilds when version changes)
-# Binary copy pattern from tailscale.com/kb/1107/heroku — no APT repo needed
-FROM openclaw-install AS tailscale-install
-
-ARG TAILSCALE_VERSION=1.94.2
-COPY --from=docker.io/tailscale/tailscale:v1.94.2 /usr/local/bin/tailscaled /usr/local/bin/tailscaled
-COPY --from=docker.io/tailscale/tailscale:v1.94.2 /usr/local/bin/tailscale /usr/local/bin/tailscale
-RUN mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale
-
 # Stage 5: Final application stage (changes on every git push)
-FROM tailscale-install AS final
+FROM openclaw-install AS final
 
 WORKDIR /app
 
