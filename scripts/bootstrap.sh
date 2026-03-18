@@ -406,9 +406,14 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Added gateway to tools.deny (prevents config.apply/patch via agent)"
   fi
-  # Patch: Matrix channel config (Phase 2) — uses env vars from Coolify
-  # Only patch if MATRIX_HOMESERVER and MATRIX_PASSWORD are set and channel not yet configured
+  # Patch: Matrix channel config — seed-once for full config, always refresh password
+  # (plugin installs can strip the password field on config overwrite)
   if [ -n "${MATRIX_HOMESERVER:-}" ] && [ -n "${MATRIX_PASSWORD:-}" ]; then
+    # Always refresh password — plugin installs strip it
+    if jq -e '.channels.matrix != null' "$CONFIG_FILE" &>/dev/null; then
+      jq --arg pw "${MATRIX_PASSWORD}" '.channels.matrix.password = $pw' \
+        "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    fi
     MATRIX_ENABLED=$(jq -r '.channels.matrix.enabled // empty' "$CONFIG_FILE" 2>/dev/null)
     if [ "$MATRIX_ENABLED" != "true" ]; then
       jq --arg hs "${MATRIX_HOMESERVER}" \
