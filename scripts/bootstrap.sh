@@ -406,6 +406,15 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
       "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     echo "[config] Added gateway to tools.deny (prevents config.apply/patch via agent)"
   fi
+  # Patch: Matrix chunking — large limit + no streaming (idempotent, re-applies if plugin install resets to default)
+  if jq -e '.channels.matrix != null' "$CONFIG_FILE" &>/dev/null; then
+    MATRIX_CHUNK=$(jq -r '.channels.matrix.textChunkLimit // empty' "$CONFIG_FILE" 2>/dev/null)
+    if [ -z "$MATRIX_CHUNK" ] || [ "$MATRIX_CHUNK" -lt 16000 ]; then
+      jq '.channels.matrix.textChunkLimit = 32000 | .channels.matrix.blockStreaming = false' \
+        "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+      echo "[config] Set matrix textChunkLimit=32000, blockStreaming=false"
+    fi
+  fi
   # Patch: Matrix channel config — seed-once for full config, always refresh password
   # (plugin installs can strip the password field on config overwrite)
   if [ -n "${MATRIX_HOMESERVER:-}" ] && [ -n "${MATRIX_PASSWORD:-}" ]; then
@@ -429,7 +438,9 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_FILE" ]; then
             "dm": {"policy": "allowlist", "allowFrom": ["@ameer:matrix.aakashe.org"]},
             "encryption": true,
             "markdown": {"tables": "bullets"},
-            "chunkMode": "newline"
+            "chunkMode": "newline",
+            "textChunkLimit": 32000,
+            "blockStreaming": false
           }' \
          "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
       echo "[config] Configured channels.matrix (homeserver=${MATRIX_HOMESERVER}, userId=@${MATRIX_USER_ID:-bot}:matrix.aakashe.org)"
